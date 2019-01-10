@@ -5,6 +5,7 @@ import numpy as np
 import gym
 
 import tensorflow as tf
+from tensorflow.python.training.training_util import global_step
 
 tf.enable_eager_execution()
 
@@ -21,9 +22,7 @@ def loss(model, x, y):
 def grad(model, inputs, targets):
     with tf.GradientTape() as tape:
         loss_value = loss(model, inputs, targets)
-    return loss_value, tape.gradient(loss_value, model.trainable_variables)
-
-
+    return loss_value, tape.gradient(loss_value, model.variables)
 
 
 # +++ get data +++
@@ -71,15 +70,43 @@ print(model.summary())
 
 optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
 
-global_step = tf.Variable(0)
+# global_step = tf.Variable(0)
+# # single optimization step
+# loss_value, grads = grad(model, train_data, train_labels)
+# print(f"Step: {global_step.numpy()}, Initial Loss: {loss_value.numpy()}")
+# optimizer.apply_gradients(zip(grads, model.variables), global_step)
+#
+# print(f"Step: {global_step.numpy()}, Loss: "
+#        f"{loss(model, train_data, train_labels).numpy()}")
 
-# single optimization step
-loss_value, grads = grad(model, train_data, train_labels)
+train_frames = zip(train_data, train_labels)
+loss_history = []
 
-print(f"Step: {global_step.numpy()}, Initial Loss: {loss_value.numpy()}")
+prediction = model(train_data)
 
-optimizer.apply_gradients(zip(grads, model.variables), global_step)
+print(prediction)
 
-print(f"Step: {global_step.numpy()}, Loss: "
-      f"{loss(model, train_data, train_labels).numpy()}")
-
+# for (batch, (feature, label)) in enumerate(train_frames):
+#     if batch % 80 == 0:
+#         print()
+#     print(".", end="")
+#
+#     with tf.GradientTape() as tape:
+#         loss_value = loss(
+#             model,
+#             feature.reshape(1, 4),
+#             label.reshape(1, 3)
+#         )
+#
+#     loss_history.append(loss_value)
+#     grads = tape.gradient(loss_value, model.variables)
+#     optimizer.apply_gradients(zip(grads, model.variables),
+#                               global_step=tf.train.
+#                               get_or_create_global_step())
+#
+#
+# plt.figure()
+# plt.plot(loss_history)
+# plt.xlabel("Batch #")
+# plt.ylabel("Loss [entropy]")
+# plt.show()
