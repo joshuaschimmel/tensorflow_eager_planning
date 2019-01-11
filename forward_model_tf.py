@@ -78,7 +78,6 @@ def run_simulation(steps: int = 10) -> list:
     # env.close()
 
 
-
 def plot_history(history) -> None:
     """Plots the history returned by the fit function."""
     plt.figure()
@@ -94,12 +93,16 @@ def plot_history(history) -> None:
     plt.show()
 
 
-def mean_loss(model, x, y):
+def mean_loss(model: tf.keras.Model,
+              x: tf.Tensor,
+              y: tf.Tensor,
+              training: bool = False):
     """Calculates MSE of the model given output and expected values
 
     :param model: a model the mse is to be calculated for
     :param x: input
     :param y: teacher value
+    :param training: whether the model is being trained
     :returns loss value
     """
     y_ = model(x)
@@ -138,6 +141,13 @@ labels = train_df.loc[:, [
                              "s_1_theta_dot"
                          ]].values
 
+train_dataset = tf.data.Dataset.from_tensor_slices(
+    (tf.cast(features, dtype=tf.float32),
+     tf.cast(labels, dtype=tf.float32)
+     ))
+train_dataset = train_dataset.shuffle(100)
+# del df, train_df, features, labels
+
 # do the same for the test data
 test_features = test_df.loc[:, [
                                    "s_0_cos(theta)",
@@ -165,30 +175,22 @@ print(model.summary())
 # choose an optimizer
 optimizer = tf.train.AdamOptimizer(0.001)
 
-loss_history = []
-
-# if validation loss does not change for 20 steps, stop training
-early_stop = keras.callbacks.EarlyStopping(monitor="val_loss",
-                                           patience=20,
-                                           min_delta=1/1000
-                                           )
-
 # hyperparameter
 _epochs = 100
 _batch_size = 32
 _validation_split = 0.1
 _shuffle = True
 
+
 def train_function(model: tf.keras.Model,
-                   x: int,
-                   y: int,
+                   data: tf.data.Dataset,
                    loss,
                    optimizer: tf.train.Optimizer,
                    epochs: int,
-                   batch_size: int,
                    validation_split: float,
-                   shuffle: bool
-                   ) -> list:
+                   batch_size: int = 32,
+                   shuffle: bool = True
+                   ) -> (list, list):
     """ Trains a keras model using input x and target y
 
     :param model: A Keras model
@@ -202,88 +204,59 @@ def train_function(model: tf.keras.Model,
     :param shuffle: whether the data should be shuffled before each epoch
     :return: list of losses after each epoch
     """
+    # list of losses total
     loss_history = []
-    for epoch in range(epochs - 1):
+    loss_mean_history = []
+    # check if shuffle is enabled
+    if shuffle:
+        data.shuffle(100, reshuffle_each_iteration=True)
+    # batch the data accordingly
+    data = data.batch(batch_size)
+
+    for epoch in range(epochs):
         # starting epoch
-        # TODO shufle
-        # TODO batch
-        batch_error = []
-        batch = 1
-        data = zip(features, labels)
+        # error in each batch
+        batch_loss = []
         for feature, label in data:
-            if batch % 80 == 0:
-                print()
-            print(".", end="")
 
             with tf.GradientTape() as tape:
                 loss_value = loss(
                     model,
-                    feature.reshape(batch_size, 4),
-                    label.reshape(batch_size, 3)
+                    feature,
+                    label
                 )
-            batch_error.append(loss_value)
-            grads = tape.gradient(loss_value,)
+            batch_loss.append(loss_value)
+            loss_history.append(loss_value)
+
+            grads = tape.gradient(loss_value, model.trainable_variables)
+
+            optimizer.apply_gradients(
+                zip(grads, model.variables),
+                global_step=tf.train.get_or_create_global_step()
+            )
+
+            loss_mean_history.append(np.mean(batch_loss))
+
+        print(f"Epoch {epoch} finished!")
+    return loss_history, loss_mean_history
 
 
+losses, losses_mean = train_function(
+    model=model,
+    data=train_dataset,
+    loss=mean_loss,
+    optimizer=optimizer,
+    epochs=10,
+    batch_size=_batch_size,
+    validation_split=0.1,
+    shuffle=True
 
-
-# start the training and save the logs
-history = model.fit(features,
-                    labels,
-                    epochs=_epochs,
-                    batch_size=_batch_size,
-                    validation_split=_validation_split,
-                    shuffle=_shuffle,
-                    callbacks=[early_stop]
-                    )
-
-# evaluate the model using the test data
-[loss, mae] = model.evaluate(test_features,
-                             test_labels,
-                             batch_size=32,
-                             verbose=1
-                             )
-
-# print the evaluated metrics
-print(f"The used metrics are: {model.metrics_names}")
-print(f"Evaluation of model:\nloss: {loss}\nmae: {mae}")
-
-plot_history(history)
-
-
-# +++ test model on new data +++
-plan_length = 10
-
-states = run_simulation(plan_length+1)
-# all states are data and label except for the first and last one
-# get all states except the last
-simulation_data = states[:-1]
-simulation_label = []
-# align the states by ignoring the first element
-for state in states[1:]:
-    # cut away the action
-    simulation_label.append(state[0][:3].reshape((1, 3)))
-
-simulation_loss = []
-simulation_mae = []
-for i in range(plan_length):
-    [s_loss, s_mae] = model.evaluate(simulation_data[i],
-                                     simulation_label[i],
-                                     batch_size=1,
-                                     verbose=1
-                                     )
-    simulation_loss.append(s_loss)
-    simulation_mae.append(s_mae)
-plan_steps = np.array(range(plan_length+1)[1:])
+)
+print(f"Length of losses: {len(losses)}")
 
 plt.figure()
-plt.xlabel("Steps")
-plt.ylabel("Error")
-plt.plot(plan_steps, np.array(
-    simulation_loss), label="MSE")
-plt.plot(plan_steps, np.array(
-    simulation_mae), label="MAE")
-plt.legend()
-# plt.ylim([0, 2])
-
+plt.plot(losses)
+plt.plot(losses_mean)
+plt.xlabel("Batch #")
+plt.ylabel("MSE")
 plt.show()
