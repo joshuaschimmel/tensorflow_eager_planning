@@ -27,6 +27,7 @@ def grad(model, inputs, targets):
 
 # +++ get data +++
 # read the datafile
+
 df = pd.read_csv("pendulum_data.csv")
 
 # shuffle the data
@@ -86,27 +87,27 @@ prediction = model(train_data)
 
 print(prediction)
 
-# for (batch, (feature, label)) in enumerate(train_frames):
-#     if batch % 80 == 0:
-#         print()
-#     print(".", end="")
-#
-#     with tf.GradientTape() as tape:
-#         loss_value = loss(
-#             model,
-#             feature.reshape(1, 4),
-#             label.reshape(1, 3)
-#         )
-#
-#     loss_history.append(loss_value)
-#     grads = tape.gradient(loss_value, model.variables)
-#     optimizer.apply_gradients(zip(grads, model.variables),
-#                               global_step=tf.train.
-#                               get_or_create_global_step())
-#
-#
-# plt.figure()
-# plt.plot(loss_history)
-# plt.xlabel("Batch #")
-# plt.ylabel("Loss [entropy]")
-# plt.show()
+for (batch, (feature, label)) in enumerate(train_frames):
+    if batch % 80 == 0:
+        print()
+    print(".", end="")
+
+    with tf.GradientTape() as tape:
+        loss_value = loss(
+            model,
+            feature.reshape(1, 4),
+            label.reshape(1, 3)
+        )
+
+    loss_history.append(loss_value)
+    grads = tape.gradient(loss_value, model.variables)
+    optimizer.apply_gradients(zip(grads, model.variables),
+                              global_step=tf.train.
+                              get_or_create_global_step())
+
+
+plt.figure()
+plt.plot(loss_history)
+plt.xlabel("Batch #")
+plt.ylabel("Loss [entropy]")
+plt.show()
