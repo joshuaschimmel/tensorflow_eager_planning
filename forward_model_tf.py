@@ -8,7 +8,6 @@ import gym
 import time
 import json
 
-
 tf.enable_eager_execution()
 
 print(f"TensorFlow version: {tf.__version__}")
@@ -154,13 +153,12 @@ test_features = test_df.loc[:, [
                                    "s_0_sin(theta)",
                                    "s_0_theta_dot",
                                    "action"
-                                ]].values
+                               ]].values
 
 test_labels = test_df.loc[:, ["s_1_cos(theta)",
                               "s_1_sin(theta)",
                               "s_1_theta_dot"
                               ]].values
-
 
 # get the model
 model = tf.keras.Sequential([
@@ -217,8 +215,8 @@ def train_function(model: tf.keras.Model,
         # starting epoch
         # error in each batch
         batch_loss = []
-        for feature, label in data:
 
+        for feature, label in data:
             with tf.GradientTape() as tape:
                 loss_value = loss(
                     model,
@@ -235,7 +233,7 @@ def train_function(model: tf.keras.Model,
                 global_step=tf.train.get_or_create_global_step()
             )
 
-            loss_mean_history.append(np.mean(batch_loss))
+        loss_mean_history.append(np.mean(batch_loss, dtype=np.float64))
 
         print(f"Epoch {epoch} finished!")
     return loss_history, loss_mean_history
@@ -253,10 +251,18 @@ losses, losses_mean = train_function(
 
 )
 print(f"Length of losses: {len(losses)}")
+print(f"Length of losses_mean: {len(losses_mean)}")
+
+losses_scale = []
+for r in range(len(losses_mean)):
+    losses_scale.append(r * _epochs)
+
 
 plt.figure()
-plt.plot(losses)
-plt.plot(losses_mean)
+# plt.plot(losses_scale, losses_mean, label="Mean Losses")
+plt.plot(losses, label="Losses")
 plt.xlabel("Batch #")
 plt.ylabel("MSE")
+plt.legend()
+
 plt.show()
