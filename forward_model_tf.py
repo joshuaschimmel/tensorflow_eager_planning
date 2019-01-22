@@ -174,7 +174,7 @@ print(model.summary())
 optimizer = tf.train.AdamOptimizer(0.001)
 
 # hyperparameter
-_epochs = 100
+_epochs = 10
 _batch_size = 32
 _validation_split = 0.1
 _shuffle = True
@@ -233,7 +233,7 @@ def train_function(model: tf.keras.Model,
                 global_step=tf.train.get_or_create_global_step()
             )
 
-        loss_mean_history.append(np.mean(batch_loss, dtype=np.float64))
+        loss_mean_history.append(batch_loss)
 
         print(f"Epoch {epoch} finished!")
     return loss_history, loss_mean_history
@@ -244,22 +244,22 @@ losses, losses_mean = train_function(
     data=train_dataset,
     loss=mean_loss,
     optimizer=optimizer,
-    epochs=10,
+    epochs=_epochs,
     batch_size=_batch_size,
-    validation_split=0.1,
-    shuffle=True
+    validation_split=_validation_split,
+    shuffle=_shuffle
 
 )
 print(f"Length of losses: {len(losses)}")
 print(f"Length of losses_mean: {len(losses_mean)}")
 
-losses_scale = []
-for r in range(len(losses_mean)):
-    losses_scale.append(r * _epochs)
+#losses_scale = []
+#for r in range(len(losses_mean)):
+#    losses_scale.append(r * _epochs)
 
 
 plt.figure()
-# plt.plot(losses_scale, losses_mean, label="Mean Losses")
+# plt.plot(losses_mean, label="Mean Losses")
 plt.plot(losses, label="Losses")
 plt.xlabel("Batch #")
 plt.ylabel("MSE")
