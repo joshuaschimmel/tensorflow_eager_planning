@@ -42,6 +42,7 @@ labels = train_df.loc[:, [
                              "s_1_theta_dot"
                          ]].values
 
+train_ds_len = len(features)
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
     (tf.cast(features, dtype=tf.float32),
@@ -49,9 +50,11 @@ train_dataset = tf.data.Dataset.from_tensor_slices(
      ))
 train_dataset = train_dataset.shuffle(100)
 print(f"Postshuffle: {train_dataset.output_shapes}")
-i = 1
-x = train_dataset.take(1000)
-for n in train_dataset:
-    print(i)
-    i += 1
+
+val_split = 0.1
+
+val_ds = train_dataset.take(train_ds_len * val_split)
+t_ds = train_dataset.skip(train_ds_len * val_split)
+
+
 

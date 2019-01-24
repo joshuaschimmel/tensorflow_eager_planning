@@ -74,26 +74,101 @@ def run_simulation(steps: int = 10) -> list:
 
 
 def mean_loss(model: tf.keras.Model,
-              x: tf.Tensor,
-              y: tf.Tensor,
-              training: bool = False):
+              input: tf.Tensor,
+              label: tf.Tensor):
     """Calculates MSE of the model given output and expected values
 
     :param model: a model the mse is to be calculated for
-    :param x: input
-    :param y: teacher value
+    :param input: input
+    :param label: teacher value
     :param training: whether the model is being trained
     :returns loss value
     """
-    y_ = model(x)
-    return tf.losses.mean_squared_error(labels=y, predictions=y_)
+    y_ = model(input)
+    return tf.losses.mean_squared_error(labels=label, predictions=y_)
+
+
+def train_function(model: tf.keras.Model,
+                   data: tf.data.Dataset,
+                   set_len: int,
+                   loss,
+                   optimizer: tf.train.Optimizer,
+                   epochs: int,
+                   validation_split: float,
+                   batch_size: int = 32,
+                   shuffle: bool = True
+                   ) -> (list, list):
+    """ Trains a keras model using input x and target y
+
+    :param model: A Keras model
+    :param x: input
+    :param y: target
+    :param loss: loss function
+    :param optimizer: optimizer to apply the gradients
+    :param epochs: # of repetitions
+    :param batch_size: # of input in a single forward pass
+    :param validation_split: [0,1] float for validation after each epoch
+    :param shuffle: whether the data should be shuffled before each epoch
+    :return: list of losses after each epoch
+    """
+    # list of losses total
+    train_losses = []
+    val_losses = []
+
+    for epoch in range(epochs):
+        # starting epoch
+
+        # check if shuffle is enabled
+        if shuffle:
+            data.shuffle(100, reshuffle_each_iteration=True)
+
+        # split of the validation set
+        train_data = data.skip(set_len * validation_split)
+        val_data = data.take(set_len * validation_split)
+
+        # batch the data accordingly
+        train_data = train_data.batch(batch_size)
+        val_data = val_data.batch(batch_size)
+
+        for feature, label in train_data:
+            with tf.GradientTape() as tape:
+                loss_value = loss(
+                    model,
+                    feature,
+                    label
+                )
+            train_losses.append(loss_value)
+
+            grads = tape.gradient(loss_value, model.trainable_variables)
+
+            optimizer.apply_gradients(
+                zip(grads, model.variables),
+                global_step=tf.train.get_or_create_global_step()
+            )
+
+        # calculate validation loss
+        epoch_val_losses = []
+        # for every batch in val_data: calculate and add the loss
+        for feature, label in val_data:
+            epoch_val_losses.append(
+                mean_loss(model, feature, label)
+            )
+        # then use np.mean to calc the mean val loss
+        val_loss = np.mean(epoch_val_losses)
+        val_losses.append(val_loss)
+
+        # Output the validation loss
+        print(f"Validation loss in Epoch {epoch + 1}: {val_loss}")
+
+    return train_losses, val_losses
 
 
 # +++ script starts here +++
 # hyperparameter
 _epochs = 10
-_batch_size = 32
+_batch_size = 64
 _validation_split = 0.1
+_learning_rate = 0.0005
 _shuffle = True
 
 # Reward function in pendulum environment:
@@ -146,6 +221,12 @@ test_labels = test_df.loc[:, ["s_1_cos(theta)",
                               "s_1_theta_dot"
                               ]].values
 
+test_dataset = tf.data.Dataset.from_tensor_slices(
+    (tf.cast(test_features, dtype=tf.float32),
+     tf.cast(test_labels, dtype=tf.float32)
+     ))
+test_dataset = test_dataset.shuffle(100)
+
 # get the model
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
@@ -157,91 +238,61 @@ model = tf.keras.Sequential([
 print(model.summary())
 
 # choose an optimizer
-optimizer = tf.train.AdamOptimizer(0.001)
+optimizer = tf.train.AdamOptimizer(_learning_rate)
 
-
-
-
-def train_function(model: tf.keras.Model,
-                   data: tf.data.Dataset,
-                   loss,
-                   optimizer: tf.train.Optimizer,
-                   epochs: int,
-                   validation_split: float,
-                   batch_size: int = 32,
-                   shuffle: bool = True
-                   ) -> (list, list):
-    """ Trains a keras model using input x and target y
-
-    :param model: A Keras model
-    :param x: input
-    :param y: target
-    :param loss: loss function
-    :param optimizer: optimizer to apply the gradients
-    :param epochs: # of repetitions
-    :param batch_size: # of input in a single forward pass
-    :param validation_split: [0,1] float for validation after each epoch
-    :param shuffle: whether the data should be shuffled before each epoch
-    :return: list of losses after each epoch
-    """
-    # list of losses total
-    loss_history = []
-    loss_mean_history = []
-    # check if shuffle is enabled
-    if shuffle:
-        data.shuffle(100, reshuffle_each_iteration=True)
-    # batch the data accordingly
-    data = data.batch(batch_size)
-
-    for epoch in range(epochs):
-        # starting epoch
-        # error in each batch
-        batch_loss = []
-
-        for feature, label in data:
-            with tf.GradientTape() as tape:
-                loss_value = loss(
-                    model,
-                    feature,
-                    label
-                )
-            batch_loss.append(loss_value)
-            loss_history.append(loss_value)
-
-            grads = tape.gradient(loss_value, model.trainable_variables)
-
-            optimizer.apply_gradients(
-                zip(grads, model.variables),
-                global_step=tf.train.get_or_create_global_step()
-            )
-
-        loss_mean_history.append(batch_loss)
-
-        print(f"Epoch {epoch} finished!")
-    return loss_history, loss_mean_history
-
-
-
-losses, losses_mean = train_function(
+train_losses, val_losses = train_function(
     model=model,
     data=train_dataset,
+    set_len=len(labels),
     loss=mean_loss,
     optimizer=optimizer,
     epochs=_epochs,
     batch_size=_batch_size,
     validation_split=_validation_split,
     shuffle=_shuffle
-
 )
-print(f"Length of losses: {len(losses)}")
-print(f"Length of losses_mean: {len(losses_mean)}")
 
+# +++ calculate test loss +++
 
+test_losses = []
+test_dataset = test_dataset.batch(_batch_size)
+for feature, label in test_dataset:
+    test_losses.append(mean_loss(model, feature, label))
+
+print(f"Test loss: {np.mean(test_losses)}")
+
+# +++ plot the metrics +++
+# use epochs as scale where a tick represents the end of an epoch
+train_loss_x_axis = np.arange(0,
+                              _epochs,
+                              np.divide(_epochs, len(train_losses))
+                              )
+
+val_loss_x_axis = np.arange(1,
+                            _epochs + 1,
+                            np.divide(_epochs, len(val_losses)))
 
 plt.figure()
-# plt.plot(losses_mean, label="Mean Losses")
-plt.plot(losses, label="Losses")
-plt.xlabel("Batch #")
+# Train loss
+plt.plot(train_loss_x_axis, train_losses, label="Training Loss")
+
+# Validation loss
+plt.plot(val_loss_x_axis,
+         val_losses,
+         "--",
+         label="Validation Loss",
+         linewidth=2)
+
+# Test loss
+plt.plot([_epochs],
+         [np.mean(test_losses)],
+         "r+",
+         label="Test Loss",
+         markersize=10,
+         linewidth=10,
+         )
+
+plt.xlabel("End of Epoch #")
 plt.ylabel("MSE")
 plt.legend()
 
