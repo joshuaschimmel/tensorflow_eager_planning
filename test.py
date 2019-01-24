@@ -2,16 +2,19 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 
+
 tf.enable_eager_execution()
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
-    tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
-    tf.keras.layers.Dense(3)
-])
+#model = tf.keras.Sequential([
+#    tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
+#    tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
+#    tf.keras.layers.Dense(3)
+#])
+
+model = tf.keras.models.load_model("save_test.h5", compile=False)
 print(model.summary())
 
 

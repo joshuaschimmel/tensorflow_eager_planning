@@ -7,6 +7,7 @@ from tensorflow.python.keras import layers
 import gym
 import time
 import json
+import os
 
 tf.enable_eager_execution()
 
@@ -72,6 +73,51 @@ def run_simulation(steps: int = 10) -> list:
     #
     # env.close()
 
+
+def get_data(file_path: str,
+             test_partition: float,
+             ) -> (np.array, np.array, np.array, np.array):
+
+    # read the datafile
+    df = pd.read_csv(file_path)
+
+    # shuffle the data
+    df = df.sample(frac=1).reset_index(drop=True)
+
+    partition_index = int(test_partition * len(df.index))
+
+    # partition the data into a training and testing set
+    train_df = df.iloc[partition_index:, :]
+    test_df = df.iloc[:partition_index, :]
+
+    # strip the data and labes from the training sets
+    features = train_df.loc[:, [
+                                   "s_0_cos(theta)",
+                                   "s_0_sin(theta)",
+                                   "s_0_theta_dot",
+                                   "action"
+                               ]].values
+
+    labels = train_df.loc[:, [
+                                 "s_1_cos(theta)",
+                                 "s_1_sin(theta)",
+                                 "s_1_theta_dot"
+                             ]].values
+
+    # do the same for the test data
+    test_features = test_df.loc[:, [
+                                       "s_0_cos(theta)",
+                                       "s_0_sin(theta)",
+                                       "s_0_theta_dot",
+                                       "action"
+                                   ]].values
+
+    test_labels = test_df.loc[:, ["s_1_cos(theta)",
+                                  "s_1_sin(theta)",
+                                  "s_1_theta_dot"
+                                  ]].values
+
+    return features, labels, test_features, test_labels
 
 def mean_loss(model: tf.keras.Model,
               input: tf.Tensor,
@@ -167,6 +213,7 @@ def train_function(model: tf.keras.Model,
 # hyperparameter
 _epochs = 10
 _batch_size = 64
+_test_split = 0.1
 _validation_split = 0.1
 _learning_rate = 0.0005
 _shuffle = True
@@ -174,52 +221,16 @@ _shuffle = True
 # Reward function in pendulum environment:
 # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
 
-# read the datafile
-df = pd.read_csv("pendulum_data.csv")
+# +++ get data +++
+features, labels, test_features, test_labels = get_data("pendulum_data.csv",
+                                                        _test_split)
 
-# shuffle the data
-df = df.sample(frac=1).reset_index(drop=True)
-
-partition = 0.1
-partition_index = int(partition * df.shape[0])
-
-# partition the data into a training and testing set
-train_df = df.iloc[partition_index:, :]
-test_df = df.iloc[:partition_index, :]
-
-# strip the data and labes from the training sets
-features = train_df.loc[:, [
-                               "s_0_cos(theta)",
-                               "s_0_sin(theta)",
-                               "s_0_theta_dot",
-                               "action"
-                           ]].values
-
-labels = train_df.loc[:, [
-                             "s_1_cos(theta)",
-                             "s_1_sin(theta)",
-                             "s_1_theta_dot"
-                         ]].values
 
 train_dataset = tf.data.Dataset.from_tensor_slices(
     (tf.cast(features, dtype=tf.float32),
      tf.cast(labels, dtype=tf.float32)
      ))
 train_dataset = train_dataset.shuffle(100)
-# del df, train_df, features, labels
-
-# do the same for the test data
-test_features = test_df.loc[:, [
-                                   "s_0_cos(theta)",
-                                   "s_0_sin(theta)",
-                                   "s_0_theta_dot",
-                                   "action"
-                               ]].values
-
-test_labels = test_df.loc[:, ["s_1_cos(theta)",
-                              "s_1_sin(theta)",
-                              "s_1_theta_dot"
-                              ]].values
 
 test_dataset = tf.data.Dataset.from_tensor_slices(
     (tf.cast(test_features, dtype=tf.float32),
@@ -252,6 +263,20 @@ train_losses, val_losses = train_function(
     shuffle=_shuffle
 )
 
+# +++ save the model +++
+# checkpoint_dir = "/home/joshua/Projects/BA/models"
+# os.makedirs(checkpoint_dir, exist_ok=True)
+# checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+# root = tf.train.Checkpoint(model=model)
+
+# root.save(checkpoint_prefix)
+
+# root.restore(tf.train.latest_checkpoint(checkpoint_dir))
+
+# save test
+model.save("save_test.h5")
+
+
 # +++ calculate test loss +++
 
 test_losses = []
@@ -262,6 +287,7 @@ for feature, label in test_dataset:
 print(f"Test loss: {np.mean(test_losses)}")
 
 # +++ plot the metrics +++
+
 # use epochs as scale where a tick represents the end of an epoch
 train_loss_x_axis = np.arange(0,
                               _epochs,
@@ -294,6 +320,8 @@ plt.plot([_epochs],
 
 plt.xlabel("End of Epoch #")
 plt.ylabel("MSE")
+plt.grid(b=True, alpha=0.25, linestyle="--")
+plt.tick_params(axis="both", which="major", direction="out")
 plt.legend()
 
 plt.show()
