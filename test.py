@@ -42,10 +42,16 @@ labels = train_df.loc[:, [
                              "s_1_theta_dot"
                          ]].values
 
-train_dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-train_dataset = train_dataset.shuffle(100).batch(32)
+
+train_dataset = tf.data.Dataset.from_tensor_slices(
+    (tf.cast(features, dtype=tf.float32),
+     tf.cast(labels, dtype=tf.float32)
+     ))
+train_dataset = train_dataset.shuffle(100)
 print(f"Postshuffle: {train_dataset.output_shapes}")
-features, labels = next(iter(train_dataset))
-print(f"Example feature/label: {features} | {labels}")
-print(f"Feature shape: {features.shape}")
+i = 1
+x = train_dataset.take(1000)
+for n in train_dataset:
+    print(i)
+    i += 1
 

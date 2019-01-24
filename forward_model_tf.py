@@ -29,10 +29,6 @@ def min_max_normalization(old_value: float,
     return new_value
 
 
-# headers = ["s_0_cos(theta)", "s_0_sin(theta)", "s_0_theta_dot",
-#                "s_1_cos(theta)", "s_1_sin(theta)", "s_1_theta_dot",
-#                "action", "reward"
-#                ]
 def run_simulation(steps: int = 10) -> list:
     """Runs the simulation for steps steps.
 
@@ -77,21 +73,6 @@ def run_simulation(steps: int = 10) -> list:
     # env.close()
 
 
-def plot_history(history) -> None:
-    """Plots the history returned by the fit function."""
-    plt.figure()
-    plt.xlabel("Epoch")
-    plt.ylabel("Mean Square Error")
-    plt.plot(history.epoch, np.array(
-        history.history['loss']), label="Train Loss")
-    plt.plot(history.epoch, np.array(
-        history.history['val_loss']), label="Validation Loss")
-    plt.legend()
-    # plt.ylim([0, 5])
-
-    plt.show()
-
-
 def mean_loss(model: tf.keras.Model,
               x: tf.Tensor,
               y: tf.Tensor,
@@ -109,6 +90,11 @@ def mean_loss(model: tf.keras.Model,
 
 
 # +++ script starts here +++
+# hyperparameter
+_epochs = 10
+_batch_size = 32
+_validation_split = 0.1
+_shuffle = True
 
 # Reward function in pendulum environment:
 # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
@@ -173,11 +159,7 @@ print(model.summary())
 # choose an optimizer
 optimizer = tf.train.AdamOptimizer(0.001)
 
-# hyperparameter
-_epochs = 10
-_batch_size = 32
-_validation_split = 0.1
-_shuffle = True
+
 
 
 def train_function(model: tf.keras.Model,
@@ -239,6 +221,7 @@ def train_function(model: tf.keras.Model,
     return loss_history, loss_mean_history
 
 
+
 losses, losses_mean = train_function(
     model=model,
     data=train_dataset,
@@ -253,9 +236,6 @@ losses, losses_mean = train_function(
 print(f"Length of losses: {len(losses)}")
 print(f"Length of losses_mean: {len(losses_mean)}")
 
-#losses_scale = []
-#for r in range(len(losses_mean)):
-#    losses_scale.append(r * _epochs)
 
 
 plt.figure()
