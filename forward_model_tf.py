@@ -30,6 +30,32 @@ def min_max_normalization(old_value: float,
     return new_value
 
 
+def save_model(model: tf.keras.models.Model,
+               file_path: str):
+    """Saves the given Keras Model in the given File.
+
+    :param model: Model to be saved
+    :param file_path: File the Model should be saved in
+    :return: None
+    """
+    # save test
+    model.save(file_path)
+
+
+def load_model(file_path: str,
+               pre_compile: bool = False
+               ) -> tf.keras.models.Model:
+    """Loads a Keras Model from the given file.
+
+    :param file_path: Path to file
+    :param pre_compile: Whether the model should be compiled before returning
+    :return: the Keras Model
+    """
+    model = tf.keras.models.load_model(file_path, compile=pre_compile)
+    print(model.summary())
+    return model
+
+
 def run_simulation(steps: int = 10) -> list:
     """Runs the simulation for steps steps.
 
@@ -53,25 +79,44 @@ def run_simulation(steps: int = 10) -> list:
     env.close()
     return simulation_states
 
-    #    for i in range(25):
-    #     x = env.reset()
-    #     env.render(mode="human")
-    #     action = get_action(env.action_space)
-    #     x = np.hstack((x, action))
-    #     y = x.reshape(1, 4)
-    #
-    #     prediction = model.predict(y)
-    #     print("Preditction: ", prediction)
-    #     x, reward, done, info = env.step(action)
-    #     x_test = x.reshape(1, 3)
-    #     print(x_test - prediction)
-    #     # for o, p in zip(x_test, prediction[0]):
-    #     #      print("Diff: ", o-p)
-    #     # result = model.test_on_batch(y, x_test)
-    #     # print(model.metrics_names, "\n", result)
-    #     print("x_test: ", x_test)
-    #
-    # env.close()
+
+def predict_simulation(predictor: tf.keras.models.Model,
+                       loss,
+                       steps: int
+                       ) -> list:
+    """Uses the predictor to predict the simulation states.
+
+    :param predictor: Model used for prediction.
+    :param loss: A function calculation the loss.
+    :param steps: # of steps to be done in the simulation.
+    :return: List of losses calculated by the loss function.
+    """
+    # build the simulation
+    env = gym.make("Pendulum-v0")
+    prediction_losses = []
+
+    # get the initial state
+    cos, sin, dot = env.reset()
+    for i in range(steps):
+        # render the environment
+        env.render(mode="human")
+        # get a random action
+        action = get_action(env.action_space)
+        # build the model input
+        s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
+        # do a step and get the next state
+        s_1,_,_,_ = env.step(action)
+        # reassign for next state
+        cos, sin, dot = s_1
+        # reshape s_1 into a label
+        s_1 = s_1.reshape(1, 3)
+        # compare the models prediction to reality
+        prediction_loss = loss(predictor, s_0, s_1)
+        print(f"Prediction Loss is: {prediction_loss}")
+        prediction_losses.append(prediction_loss)
+
+    env.close()
+    return prediction_losses
 
 
 def get_data(file_path: str,
@@ -119,19 +164,19 @@ def get_data(file_path: str,
 
     return features, labels, test_features, test_labels
 
+
 def mean_loss(model: tf.keras.Model,
-              input: tf.Tensor,
-              label: tf.Tensor):
+              model_input: tf.Tensor,
+              model_target: tf.Tensor):
     """Calculates MSE of the model given output and expected values
 
     :param model: a model the mse is to be calculated for
-    :param input: input
-    :param label: teacher value
-    :param training: whether the model is being trained
+    :param model_input: input
+    :param model_target: teacher value
     :returns loss value
     """
-    y_ = model(input)
-    return tf.losses.mean_squared_error(labels=label, predictions=y_)
+    y_ = model(model_input)
+    return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
 
 
 def train_function(model: tf.keras.Model,
@@ -144,19 +189,23 @@ def train_function(model: tf.keras.Model,
                    batch_size: int = 32,
                    shuffle: bool = True
                    ) -> (list, list):
-    """ Trains a keras model using input x and target y
+    """Trains a Keras Model using data.
 
-    :param model: A Keras model
-    :param x: input
-    :param y: target
-    :param loss: loss function
-    :param optimizer: optimizer to apply the gradients
-    :param epochs: # of repetitions
-    :param batch_size: # of input in a single forward pass
-    :param validation_split: [0,1] float for validation after each epoch
-    :param shuffle: whether the data should be shuffled before each epoch
-    :return: list of losses after each epoch
+    :param model: The model to be trained
+    :param data: Dataset in the shape (feature, label)
+    :param set_len: The length of the Dataset (sorry)
+    :param loss: The loss function to be applied
+    :param optimizer: The optimizer to apply the loss
+    :param epochs: # of iterations over the training set
+    :param validation_split: Value in [0,1] defining the split of training
+        and validation set.
+    :param batch_size: Size of the batches for a single pass through
+        the network. Default 32.
+    :param shuffle: Whether the Dataset should be shuffled (for each
+        iteration). Default True.
+    :return:
     """
+
     # list of losses total
     train_losses = []
     val_losses = []
@@ -168,7 +217,7 @@ def train_function(model: tf.keras.Model,
         if shuffle:
             data.shuffle(100, reshuffle_each_iteration=True)
 
-        # split of the validation set
+        # split the validation set off
         train_data = data.skip(set_len * validation_split)
         val_data = data.take(set_len * validation_split)
 
@@ -185,8 +234,10 @@ def train_function(model: tf.keras.Model,
                 )
             train_losses.append(loss_value)
 
+            # get the gradients from the tape
             grads = tape.gradient(loss_value, model.trainable_variables)
 
+            # apply the gradients using the optimizer
             optimizer.apply_gradients(
                 zip(grads, model.variables),
                 global_step=tf.train.get_or_create_global_step()
@@ -209,119 +260,108 @@ def train_function(model: tf.keras.Model,
     return train_losses, val_losses
 
 
-# +++ script starts here +++
-# hyperparameter
-_epochs = 10
-_batch_size = 64
-_test_split = 0.1
-_validation_split = 0.1
-_learning_rate = 0.0005
-_shuffle = True
+def forward_pass():
+    # hyperparameter
+    _epochs = 10
+    _batch_size = 32
+    _test_split = 0.1
+    _validation_split = 0.1
+    _learning_rate = 0.001
+    _shuffle = True
 
-# Reward function in pendulum environment:
-# -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
+    # Reward function in pendulum environment:
+    # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
 
-# +++ get data +++
-features, labels, test_features, test_labels = get_data("pendulum_data.csv",
-                                                        _test_split)
+    # +++ get data +++
+    (features, labels,
+     test_features, test_labels) = get_data("pendulum_data.csv",
+                                            _test_split)
 
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (tf.cast(features, dtype=tf.float32),
+         tf.cast(labels, dtype=tf.float32)
+         ))
+    train_dataset = train_dataset.shuffle(100)
 
-train_dataset = tf.data.Dataset.from_tensor_slices(
-    (tf.cast(features, dtype=tf.float32),
-     tf.cast(labels, dtype=tf.float32)
-     ))
-train_dataset = train_dataset.shuffle(100)
+    test_dataset = tf.data.Dataset.from_tensor_slices(
+        (tf.cast(test_features, dtype=tf.float32),
+         tf.cast(test_labels, dtype=tf.float32)
+         ))
+    test_dataset = test_dataset.shuffle(100)
 
-test_dataset = tf.data.Dataset.from_tensor_slices(
-    (tf.cast(test_features, dtype=tf.float32),
-     tf.cast(test_labels, dtype=tf.float32)
-     ))
-test_dataset = test_dataset.shuffle(100)
+    # get the model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
+        tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
+        tf.keras.layers.Dense(3)
+    ])
 
-# get the model
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
-    tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
-    tf.keras.layers.Dense(3)
-])
+    # print the models summary
+    print(model.summary())
 
-# print the models summary
-print(model.summary())
+    # choose an optimizer
+    optimizer = tf.train.AdamOptimizer(_learning_rate)
 
-# choose an optimizer
-optimizer = tf.train.AdamOptimizer(_learning_rate)
+    train_losses, val_losses = train_function(
+        model=model,
+        data=train_dataset,
+        set_len=len(labels),
+        loss=mean_loss,
+        optimizer=optimizer,
+        epochs=_epochs,
+        batch_size=_batch_size,
+        validation_split=_validation_split,
+        shuffle=_shuffle
+    )
 
-train_losses, val_losses = train_function(
-    model=model,
-    data=train_dataset,
-    set_len=len(labels),
-    loss=mean_loss,
-    optimizer=optimizer,
-    epochs=_epochs,
-    batch_size=_batch_size,
-    validation_split=_validation_split,
-    shuffle=_shuffle
-)
+    # +++ save the model +++
+    save_model(model, "forward_model.h5")
 
-# +++ save the model +++
-# checkpoint_dir = "/home/joshua/Projects/BA/models"
-# os.makedirs(checkpoint_dir, exist_ok=True)
-# checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-# root = tf.train.Checkpoint(model=model)
+    # +++ calculate test loss +++
 
-# root.save(checkpoint_prefix)
+    test_losses = []
+    test_dataset = test_dataset.batch(_batch_size)
+    for feature, label in test_dataset:
+        test_losses.append(mean_loss(model, feature, label))
 
-# root.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    print(f"Test loss: {np.mean(test_losses)}")
 
-# save test
-model.save("save_test.h5")
+    # +++ plot the metrics +++
 
+    # use epochs as scale where a tick represents the end of an epoch
+    train_loss_x_axis = np.arange(0,
+                                  _epochs,
+                                  np.divide(_epochs, len(train_losses))
+                                  )
 
-# +++ calculate test loss +++
+    val_loss_x_axis = np.arange(1,
+                                _epochs + 1,
+                                np.divide(_epochs, len(val_losses)))
 
-test_losses = []
-test_dataset = test_dataset.batch(_batch_size)
-for feature, label in test_dataset:
-    test_losses.append(mean_loss(model, feature, label))
+    plt.figure()
+    # Train loss
+    plt.plot(train_loss_x_axis, train_losses, label="Training Loss")
 
-print(f"Test loss: {np.mean(test_losses)}")
+    # Validation loss
+    plt.plot(val_loss_x_axis,
+             val_losses,
+             "--",
+             label="Validation Loss",
+             linewidth=2)
 
-# +++ plot the metrics +++
+    # Test loss
+    plt.plot([_epochs],
+             [np.mean(test_losses)],
+             "r+",
+             label="Test Loss",
+             markersize=10,
+             linewidth=10,
+             )
 
-# use epochs as scale where a tick represents the end of an epoch
-train_loss_x_axis = np.arange(0,
-                              _epochs,
-                              np.divide(_epochs, len(train_losses))
-                              )
+    plt.xlabel("End of Epoch #")
+    plt.ylabel("MSE")
+    plt.grid(b=True, alpha=0.25, linestyle="--")
+    plt.tick_params(axis="both", which="major", direction="out")
+    plt.legend()
 
-val_loss_x_axis = np.arange(1,
-                            _epochs + 1,
-                            np.divide(_epochs, len(val_losses)))
-
-plt.figure()
-# Train loss
-plt.plot(train_loss_x_axis, train_losses, label="Training Loss")
-
-# Validation loss
-plt.plot(val_loss_x_axis,
-         val_losses,
-         "--",
-         label="Validation Loss",
-         linewidth=2)
-
-# Test loss
-plt.plot([_epochs],
-         [np.mean(test_losses)],
-         "r+",
-         label="Test Loss",
-         markersize=10,
-         linewidth=10,
-         )
-
-plt.xlabel("End of Epoch #")
-plt.ylabel("MSE")
-plt.grid(b=True, alpha=0.25, linestyle="--")
-plt.tick_params(axis="both", which="major", direction="out")
-plt.legend()
-
-plt.show()
+    plt.show()

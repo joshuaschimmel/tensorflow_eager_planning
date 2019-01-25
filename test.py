@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import forward_model_tf as fm
+import matplotlib.pyplot as plt
 
 
 tf.enable_eager_execution()
@@ -14,50 +16,22 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 #    tf.keras.layers.Dense(3)
 #])
 
-model = tf.keras.models.load_model("save_test.h5", compile=False)
+# load saved model
+
+model = tf.keras.models.load_model("forward_model.h5", compile=False)
 print(model.summary())
 
+# test the model
+losses = fm.predict_simulation(model,
+                               fm.mean_loss,
+                               steps=10)
+print(f"Overall losses: {np.array(losses)}")
 
-# read the datafile
-df = pd.read_csv("pendulum_data.csv")
+plt.figure()
+plt.plot(losses, label="Prediction Losses")
+plt.legend()
+plt.show()
 
-# shuffle the data
-df = df.sample(frac=1).reset_index(drop=True)
-
-partition = 0.1
-partition_index = int(partition * df.shape[0])
-
-# partition the data into a training and testing set
-train_df = df.iloc[partition_index:, :]
-test_df = df.iloc[:partition_index, :]
-
-# strip the data and labes from the training sets
-features = train_df.loc[:, [
-                               "s_0_cos(theta)",
-                               "s_0_sin(theta)",
-                               "s_0_theta_dot",
-                               "action"
-                           ]].values
-
-labels = train_df.loc[:, [
-                             "s_1_cos(theta)",
-                             "s_1_sin(theta)",
-                             "s_1_theta_dot"
-                         ]].values
-
-train_ds_len = len(features)
-
-train_dataset = tf.data.Dataset.from_tensor_slices(
-    (tf.cast(features, dtype=tf.float32),
-     tf.cast(labels, dtype=tf.float32)
-     ))
-train_dataset = train_dataset.shuffle(100)
-print(f"Postshuffle: {train_dataset.output_shapes}")
-
-val_split = 0.1
-
-val_ds = train_dataset.take(train_ds_len * val_split)
-t_ds = train_dataset.skip(train_ds_len * val_split)
 
 
 
