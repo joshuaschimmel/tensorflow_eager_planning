@@ -1,4 +1,4 @@
-import pendulum_scripts as pend
+import pendulum as pend
 import csv
 
 pend.create_training_data(iterations=10000)

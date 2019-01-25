@@ -1,3 +1,6 @@
+import os
+from collections import deque
+import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,9 +8,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import layers
 import gym
-import time
 import json
-import os
 
 tf.enable_eager_execution()
 
@@ -15,14 +16,10 @@ print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 
-def get_action(action_space) -> float:
-    """returns an action in the actionspace"""
-    return action_space.sample()
-
-
 def min_max_normalization(old_value: float,
                           old_range: dict,
-                          new_range: dict) -> float:
+                          new_range: dict
+                          ) -> float:
     new_value = ((old_value - old_range["min"])
                  / (old_range["max"] - old_range["min"])) \
                 * (new_range["max"] - new_range["min"]) \
@@ -31,7 +28,8 @@ def min_max_normalization(old_value: float,
 
 
 def save_model(model: tf.keras.models.Model,
-               file_path: str):
+               file_path: str = "forward_model.h5"
+               ):
     """Saves the given Keras Model in the given File.
 
     :param model: Model to be saved
@@ -54,69 +52,6 @@ def load_model(file_path: str,
     model = tf.keras.models.load_model(file_path, compile=pre_compile)
     print(model.summary())
     return model
-
-
-def run_simulation(steps: int = 10) -> list:
-    """Runs the simulation for steps steps.
-
-    :param steps: number of steps
-    :return: list of states as numpy arrays
-    """
-    env = gym.make('Pendulum-v0')
-    simulation_states = []
-
-    cos, sin, dot = env.reset()
-    for i in range(steps):
-        env.render(mode="human")
-        action = get_action(env.action_space)
-        s_0 = np.array([cos, sin, dot, action])
-        s_0 = s_0.reshape(1, 4)
-        simulation_states.append(s_0)
-
-        s_1, _, _, _ = env.step(action)
-        cos, sin, dot = s_1
-
-    env.close()
-    return simulation_states
-
-
-def predict_simulation(predictor: tf.keras.models.Model,
-                       loss,
-                       steps: int
-                       ) -> list:
-    """Uses the predictor to predict the simulation states.
-
-    :param predictor: Model used for prediction.
-    :param loss: A function calculation the loss.
-    :param steps: # of steps to be done in the simulation.
-    :return: List of losses calculated by the loss function.
-    """
-    # build the simulation
-    env = gym.make("Pendulum-v0")
-    prediction_losses = []
-
-    # get the initial state
-    cos, sin, dot = env.reset()
-    for i in range(steps):
-        # render the environment
-        env.render(mode="human")
-        # get a random action
-        action = get_action(env.action_space)
-        # build the model input
-        s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
-        # do a step and get the next state
-        s_1,_,_,_ = env.step(action)
-        # reassign for next state
-        cos, sin, dot = s_1
-        # reshape s_1 into a label
-        s_1 = s_1.reshape(1, 3)
-        # compare the models prediction to reality
-        prediction_loss = loss(predictor, s_0, s_1)
-        print(f"Prediction Loss is: {prediction_loss}")
-        prediction_losses.append(prediction_loss)
-
-    env.close()
-    return prediction_losses
 
 
 def get_data(file_path: str,
@@ -176,7 +111,8 @@ def mean_loss(model: tf.keras.Model,
     :returns loss value
     """
     y_ = model(model_input)
-    return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
+    #return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
+    return tf.losses.absolute_difference(labels=model_target, predictions=y_)
 
 
 def train_function(model: tf.keras.Model,
@@ -260,13 +196,13 @@ def train_function(model: tf.keras.Model,
     return train_losses, val_losses
 
 
-def forward_pass():
+def build_forward_model():
     # hyperparameter
-    _epochs = 10
+    _epochs = 20
     _batch_size = 32
     _test_split = 0.1
     _validation_split = 0.1
-    _learning_rate = 0.001
+    _learning_rate = 0.0002
     _shuffle = True
 
     # Reward function in pendulum environment:
@@ -291,8 +227,9 @@ def forward_pass():
 
     # get the model
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
-        tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
+        tf.keras.layers.Dense(40, input_shape=(4,), activation=tf.nn.relu),
+        #tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(40, activation=tf.nn.relu),
         tf.keras.layers.Dense(3)
     ])
 
@@ -315,7 +252,7 @@ def forward_pass():
     )
 
     # +++ save the model +++
-    save_model(model, "forward_model.h5")
+    #save_model(model, "forward_model.h5")
 
     # +++ calculate test loss +++
 
@@ -365,3 +302,28 @@ def forward_pass():
     plt.legend()
 
     plt.show()
+
+    return model
+
+
+def predict_states(model: tf.keras.models.Model,
+                   s_0: list,
+                   plan: list
+                   ) -> list:
+    """Uses the model to predict the state after each step.
+
+    :param model: Model used for prediction
+    :param s_0: initial state
+    :param plan: list of actions
+    :return: list of states
+    """
+    states = [s_0]
+    plan = deque(plan)
+    next_action = plan.popleft()
+    s_0.append(next_action)
+    next_input = np.array(s_0).reshape(1,4)
+    output = model(next_input).numpy()
+
+    while plan:
+        break
+
