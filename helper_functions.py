@@ -31,6 +31,7 @@ def plot_graphs(plot_list: list) -> None:
                  label=plot_data["label"]
                  )
 
+    plt.ylim(-10, 10)
     plt.grid(b=True, alpha=0.25, linestyle="--")
     plt.tick_params(axis="both", which="major", direction="out")
     plt.legend()
