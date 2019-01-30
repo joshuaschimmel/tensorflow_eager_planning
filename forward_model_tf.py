@@ -239,7 +239,7 @@ def train_function(model: tf.keras.Model,
         # for every batch in val_data: calculate and add the loss
         for feature, label in val_data:
             epoch_val_losses.append(
-                mean_loss(model, feature, label)
+                loss(model, feature, label)
             )
         # then use np.mean to calc the mean val loss
         val_loss = np.mean(epoch_val_losses)
@@ -265,7 +265,7 @@ def build_forward_model():
 
     # +++ get data +++
     (features, labels,
-     test_features, test_labels) = get_data("pendulum_data.csv",
+     test_features, test_labels) = get_data("data/pendulum_data.csv",
                                             _test_split)
 
     train_dataset = tf.data.Dataset.from_tensor_slices(
@@ -297,7 +297,7 @@ def build_forward_model():
         model=model,
         data=train_dataset,
         set_len=len(labels),
-        loss=mean_loss,
+        loss=rmse_loss,
         optimizer=optimizer,
         epochs=_epochs,
         batch_size=_batch_size,
@@ -385,14 +385,14 @@ def predict_states(model: tf.keras.models.Model,
         next_action = plan.popleft()
 
         # merge it with the current state
-        current_state.append(next_action)
+        next_input = np.append(current_state, next_action)
 
         # shape the input for the model (because of expected batching)
         # into the form [[current_state]]
-        next_input = np.array(current_state).reshape(1,4)
+        next_input = np.array(next_input).reshape(1,4)
 
         # let the model predict the next state
-        prediction = model(next_input).numpy()
+        prediction = model(next_input).numpy()[0]
 
         # add the prediction to the return list
         predicted_states.append(prediction)
@@ -401,3 +401,44 @@ def predict_states(model: tf.keras.models.Model,
         current_state = prediction
 
     return predicted_states
+
+
+def predict_simulation(predictor: tf.keras.models.Model,
+                       loss,
+                       steps: int
+                       ) -> list:
+    """Uses the predictor to predict the simulation states.
+
+    :param predictor: Model used for prediction.
+    :param loss: A function calculation the loss.
+    :param steps: # of steps to be done in the simulation.
+    :return: List of losses calculated by the loss function.
+    """
+    # build the simulation
+    env = gym.make("Pendulum-v0")
+    prediction_losses = []
+
+    # get the initial state
+    cos, sin, dot = env.reset()
+    for i in range(steps):
+        # render the environment
+        env.render(mode="human")
+        # get a random action
+        #action = get_action(env.action_space)
+
+        action = np.array([0])
+        # build the model input
+        s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
+        # do a step and get the next state
+        s_1,_,_,_ = env.step(action)
+        # reassign for next state
+        cos, sin, dot = s_1
+        # reshape s_1 into a label
+        s_1 = s_1.reshape(1, 3)
+        # compare the models prediction to reality
+        prediction_loss = loss(predictor, s_0, s_1)
+        print(f"Prediction Loss is: {prediction_loss}")
+        prediction_losses.append(prediction_loss)
+
+    env.close()
+    return prediction_losses

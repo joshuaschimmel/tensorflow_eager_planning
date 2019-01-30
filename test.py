@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import forward_model_tf as fm
 import pendulum as pend
+import helper_functions as hf
 
 
 tf.enable_eager_execution()
@@ -19,30 +20,59 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 
 # load saved model
 
-# model = tf.keras.models.load_model("prediction_model.h5", compile=False)
+#model = tf.keras.models.load_model("models/prediction_model.h5",
+#                                   compile=False
+#                                   )
 model = fm.build_forward_model()
 print(model.summary())
+#
+# #save_answer = input("save model? [yes|no]")
+#
+# #if save_answer == "yes":
+# #   fm.save_model(model, "models/prediction_model.h5")
+# i = 0
+# for i in range(1):
+#     # test the model
+#     losses = fm.predict_simulation(model,
+#                                    fm.rmse_loss,
+#                                    steps=200)
+#     print(f"Overall losses: {np.array(losses)}")
+#
+#     plt.figure()
+#     plt.plot(losses, label="Prediction Losses")
+#     plt.legend()
+#     plt.show()
 
-save_answer = input("save model? [yes|no]")
+steps = 100
+plan = [0] * (steps - 1) # because we count s_0 as a "step"
+sim_states = pend.run_simulation(steps=steps)
+s_0 = sim_states[0]
+pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
 
-if save_answer == "yes":
-   fm.save_model(model, "prediction_model.h5")
-i = 0
-for i in range(1):
-    # test the model
-    losses = pend.predict_simulation(model,
-                                     fm.mean_loss,
-                                     steps=200)
-    print(f"Overall losses: {np.array(losses)}")
+sim_cos = []
+sim_sin = []
+sim_dot = []
+pred_cos = []
+pred_sin = []
+pred_dot = []
 
-    plt.figure()
-    plt.plot(losses, label="Prediction Losses")
-    plt.legend()
-    plt.show()
+for state in sim_states:
+    sim_cos.append(state[0])
+    sim_sin.append(state[1])
+    sim_dot.append(state[2])
 
-
-#fm.predict_states(model, [1,1,1], [2, -1, 3])
-
+for state in pred_states:
+    pred_cos.append(state[0])
+    pred_sin.append(state[1])
+    pred_dot.append(state[2])
 
 
+plot_list = [
+    { "values": sim_cos, "label": "sim_cos", "format": "g-"},
+    { "values": sim_sin, "label": "sim_sin", "format": "b-"},
+    { "values": sim_dot, "label": "sim_dot", "format": "r-"},
+    {"values": pred_cos, "label": "pred_cos", "format": "g--"},
+    {"values": pred_sin, "label": "pred_sin", "format": "b--"},
+    {"values": pred_dot, "label": "pred_dot", "format": "r--"},]
 
+hf.plot_graphs(plot_list)

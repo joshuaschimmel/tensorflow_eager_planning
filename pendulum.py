@@ -84,67 +84,21 @@ def run_simulation(steps: int = 10) -> list:
     :param steps: number of steps
     :return: list of states as numpy arrays
     """
+    # initialise simulaiton environtment
     env = gym.make('Pendulum-v0')
-    simulation_states = []
 
-    cos, sin, dot = env.reset()
+    # get first state
+    s_0 = env.reset()
+    # save first state in the list
+    simulation_states = []
     for i in range(steps):
         env.render(mode="human")
         action = get_action(env.action_space)
-        s_0 = np.array([cos, sin, dot, action])
-        s_0 = s_0.reshape(1, 4)
+        s_0, _, _, _ = env.step(np.array([0]))
         simulation_states.append(s_0)
-
-        s_1, _, _, _ = env.step(action)
-        cos, sin, dot = s_1
 
     env.close()
     return simulation_states
 
 
-def predict_simulation(predictor: tf.keras.models.Model,
-                       loss,
-                       steps: int
-                       ) -> list:
-    """Uses the predictor to predict the simulation states.
 
-    :param predictor: Model used for prediction.
-    :param loss: A function calculation the loss.
-    :param steps: # of steps to be done in the simulation.
-    :return: List of losses calculated by the loss function.
-    """
-    # build the simulation
-    env = gym.make("Pendulum-v0")
-    prediction_losses = []
-
-    # get the initial state
-    cos, sin, dot = env.reset()
-    for i in range(steps):
-        # render the environment
-        env.render(mode="human")
-        # get a random action
-        #action = get_action(env.action_space)
-
-        action = np.array([0])
-        # build the model input
-        s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
-        # do a step and get the next state
-        s_1,_,_,_ = env.step(action)
-        # reassign for next state
-        cos, sin, dot = s_1
-        # reshape s_1 into a label
-        s_1 = s_1.reshape(1, 3)
-        # compare the models prediction to reality
-        prediction_loss = loss(predictor, s_0, s_1)
-        print(f"Prediction Loss is: {prediction_loss}")
-        prediction_losses.append(prediction_loss)
-
-    env.close()
-    return prediction_losses
-
-
-def predict_plan_effect(model: tf.keras.models.Model,
-                        plan: list,
-                        loss
-                        ) -> list:
-    pass
