@@ -16,16 +16,7 @@ print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 
-def min_max_normalization(old_value: float,
-                          old_range: dict,
-                          new_range: dict
-                          ) -> float:
-    new_value = ((old_value - old_range["min"])
-                 / (old_range["max"] - old_range["min"])) \
-                * (new_range["max"] - new_range["min"]) \
-                + new_range["min"]
-    return new_value
-
+# +++ i/o functions +++
 
 def save_model(model: tf.keras.models.Model,
                file_path: str = "forward_model.h5"
@@ -53,6 +44,8 @@ def load_model(file_path: str,
     print(model.summary())
     return model
 
+
+# +++ preprocessing functions +++
 
 def get_data(file_path: str,
              test_partition: float,
@@ -100,6 +93,8 @@ def get_data(file_path: str,
     return features, labels, test_features, test_labels
 
 
+# +++ loss functions +++
+
 def mean_loss(model: tf.keras.Model,
               model_input: tf.Tensor,
               model_target: tf.Tensor):
@@ -111,9 +106,69 @@ def mean_loss(model: tf.keras.Model,
     :returns loss value
     """
     y_ = model(model_input)
-    #return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
+    return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
+
+
+def abs_loss(model: tf.keras.Model,
+              model_input: tf.Tensor,
+              model_target: tf.Tensor):
+    """Calculates the absolute difference loss for a model.
+
+    :param model: a model the mae is to be calculated for
+    :param model_input: input
+    :param model_target: teacher value
+    :returns loss value
+    """
+    y_ = model(model_input)
     return tf.losses.absolute_difference(labels=model_target, predictions=y_)
 
+
+def rmse_loss(model: tf.keras.Model,
+              model_input: tf.Tensor,
+              model_target: tf.Tensor):
+    """Calculates RMSE of the model given input and teacher values
+
+    :param model: a kerase model for which to calculate the RMSE
+    :param model_input: input for the model
+    :param model_target: target|teacher values
+    :return: RMSE value
+    """
+    model_output = model(model_input)
+    return tf.sqrt(tf.losses.mean_squared_error(labels=model_target,
+                                                 predictions=model_output
+                                                 ))
+
+
+def single_rmse(target: list, value: list) -> float:
+    """Calculates the RMSE for a single value target pair
+
+    :param value: predicted value
+    :param target: target value
+    :return: RMSE
+    """
+    return np.sqrt(np.mean(np.square(np.subtract(target, value))))
+
+
+def list_rmse(values: list, targets: list) -> list:
+    """Calculates the RMSE over lists of values and targets.
+
+    Calculates multiple RMSE for a list of values and targets.
+    Returns a list calculated RMSEs
+
+    :param values: List of predicted values
+    :param targets: List with wanted target values
+    :return: list with RMSE values
+    """
+    _calculated_rmses = []
+
+    for _v, _t in zip(values, targets):
+        # RMSE function
+        _calculated_rmses.append(single_rmse(value=_v, target=_t))
+
+    return _calculated_rmses
+
+
+# +++ training functions +++
 
 def train_function(model: tf.keras.Model,
                    data: tf.data.Dataset,
@@ -228,7 +283,6 @@ def build_forward_model():
     # get the model
     model = tf.keras.Sequential([
         tf.keras.layers.Dense(40, input_shape=(4,), activation=tf.nn.relu),
-        #tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(40, activation=tf.nn.relu),
         tf.keras.layers.Dense(3)
     ])
@@ -252,7 +306,7 @@ def build_forward_model():
     )
 
     # +++ save the model +++
-    #save_model(model, "forward_model.h5")
+    # save_model(model, "forward_model.h5")
 
     # +++ calculate test loss +++
 
@@ -307,23 +361,43 @@ def build_forward_model():
 
 
 def predict_states(model: tf.keras.models.Model,
-                   s_0: list,
+                   state_0: list,
                    plan: list
                    ) -> list:
     """Uses the model to predict the state after each step.
 
     :param model: Model used for prediction
-    :param s_0: initial state
-    :param plan: list of actions
-    :return: list of states
+    :param s_0: initial state s_0: [cos, sin, dot]
+    :param plan: list of actions [a_1, ..., a_n]
+    :return: list of predicted states [s_0, ..., s_n]
     """
-    states = [s_0]
+    # initial state does not need to be predicted
+    predicted_states = [state_0]
+
+    # use deque for efficient deconstruction of the list
     plan = deque(plan)
-    next_action = plan.popleft()
-    s_0.append(next_action)
-    next_input = np.array(s_0).reshape(1,4)
-    output = model(next_input).numpy()
+
+    # get the current state
+    current_state = state_0
 
     while plan:
-        break
+        # get the next action
+        next_action = plan.popleft()
 
+        # merge it with the current state
+        current_state.append(next_action)
+
+        # shape the input for the model (because of expected batching)
+        # into the form [[current_state]]
+        next_input = np.array(current_state).reshape(1,4)
+
+        # let the model predict the next state
+        prediction = model(next_input).numpy()
+
+        # add the prediction to the return list
+        predicted_states.append(prediction)
+
+        # reassign current state to prediction
+        current_state = prediction
+
+    return predicted_states

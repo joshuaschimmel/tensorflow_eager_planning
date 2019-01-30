@@ -19,16 +19,16 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 
 # load saved model
 
-model = tf.keras.models.load_model("prediction_model.h5", compile=False)
-#model = fm.build_forward_model()
+# model = tf.keras.models.load_model("prediction_model.h5", compile=False)
+model = fm.build_forward_model()
 print(model.summary())
 
-#save_answer = input("save model? [yes|no]")
+save_answer = input("save model? [yes|no]")
 
-#if save_answer == "yes":
-#   fm.save_model(model, "prediction_model.h5")
+if save_answer == "yes":
+   fm.save_model(model, "prediction_model.h5")
 i = 0
-for i in range (5):
+for i in range(1):
     # test the model
     losses = pend.predict_simulation(model,
                                      fm.mean_loss,
