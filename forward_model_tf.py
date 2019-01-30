@@ -253,12 +253,13 @@ def train_function(model: tf.keras.Model,
 
 def build_forward_model():
     # hyperparameter
-    _epochs = 20
+    _epochs = 10
     _batch_size = 32
     _test_split = 0.1
     _validation_split = 0.1
-    _learning_rate = 0.0002
+    _learning_rate = 0.001
     _shuffle = True
+    _neurons = 20
 
     # Reward function in pendulum environment:
     # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
@@ -282,8 +283,14 @@ def build_forward_model():
 
     # get the model
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(40, input_shape=(4,), activation=tf.nn.relu),
-        tf.keras.layers.Dense(40, activation=tf.nn.relu),
+        tf.keras.layers.Dense(_neurons,
+                              input_shape=(4,),
+                              activation=tf.nn.relu),
+        tf.keras.layers.Dense(_neurons,
+                              activation=tf.nn.relu),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(_neurons,
+                              activation=tf.nn.relu),
         tf.keras.layers.Dense(3)
     ])
 

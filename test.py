@@ -19,17 +19,21 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 #])
 
 # load saved model
+load_model = False
+#load_model = False
+model_path = "models/model_20-20-20_10e_drop.h5"
 
-#model = tf.keras.models.load_model("models/prediction_model.h5",
-#                                   compile=False
-#                                   )
-model = fm.build_forward_model()
+if load_model:
+    model = tf.keras.models.load_model(
+        model_path,
+        compile=False
+    )
+else:
+    model = fm.build_forward_model()
+
 print(model.summary())
 #
-# #save_answer = input("save model? [yes|no]")
-#
-# #if save_answer == "yes":
-# #   fm.save_model(model, "models/prediction_model.h5")
+
 # i = 0
 # for i in range(1):
 #     # test the model
@@ -43,7 +47,7 @@ print(model.summary())
 #     plt.legend()
 #     plt.show()
 
-steps = 100
+steps = 200
 plan = [0] * (steps - 1) # because we count s_0 as a "step"
 sim_states = pend.run_simulation(steps=steps)
 s_0 = sim_states[0]
@@ -76,3 +80,11 @@ plot_list = [
     {"values": pred_dot, "label": "pred_dot", "format": "r--"},]
 
 hf.plot_graphs(plot_list)
+
+
+if not load_model:
+    save_answer = input("save model? [yes|no]")
+
+    if save_answer == "yes":
+        fm.save_model(model, model_path)
+        print("saved")
