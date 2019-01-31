@@ -12,10 +12,21 @@ tf.enable_eager_execution()
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
+#hyperparameters
+_neurons = 20
+_hidden_layer = 1
+_epochs = 10
+_loss_function = fm.rmse_loss
+_drop_rate = 0.5
 
+drop_text = "drop"
+if _drop_rate != 0.0:
+    drop_text = "nodrop"
+neuron_text = (str(_neurons) + '-') * _hidden_layer + str(_neurons)
 # load saved model
+
 load_model = False
-model_path = "models/model_40-40_10e_drop.h5"
+model_path = f"models/model_{neuron_text}_{_epochs}e_{drop_text}.h5"
 
 if load_model:
     model = tf.keras.models.load_model(
@@ -23,10 +34,11 @@ if load_model:
         compile=False
     )
 else:
-    model = fm.build_forward_model(epochs=10,
-                                   neurons=20,
-                                   hidden_layers=1,
-                                   loss=fm.abs_loss,
+    model = fm.build_forward_model(epochs=_epochs,
+                                   neurons=_neurons,
+                                   hidden_layers=_hidden_layer,
+                                   loss=_loss_function,
+                                   dropout_rate=_drop_rate,
                                    plot_performance=False)
 
 print(model.summary())
