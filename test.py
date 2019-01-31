@@ -19,9 +19,9 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 #])
 
 # load saved model
-load_model = False
+load_model = True
 #load_model = False
-model_path = "models/model_20-20-20_10e_drop.h5"
+model_path = "models/model_40-40_10e_drop.h5"
 
 if load_model:
     model = tf.keras.models.load_model(

@@ -93,6 +93,49 @@ def get_data(file_path: str,
     return features, labels, test_features, test_labels
 
 
+def get_model(layers: int = 2,
+              neurons: int = 20,
+              dropout_rate: float = 0.5
+              ) -> tf.keras.models.Model:
+    """Creates a sequential Keras model with the given parameters.
+
+    Using the parameters, this function creates a Keras model with
+    at least one fully connected Dense followed by a Dropout layer.
+    After that, the rest of the Dense layers will be added if
+    layers > 1.
+
+    :param layers: Number of fully connected Dense layers
+    :param neurons: Number of neuron in each hidden layer
+    :param dropout_rate: float for the dropout chance in the
+        second "layer"
+    :return: the finished Keras model
+    """
+    if layers < 1:
+        layers = 1
+
+    # prepare model by gettin a simple sequential object
+    model = tf.keras.Sequential()
+    # add first hidden layer with input shape
+    model.add(tf.keras.layers.Dense(neurons,
+                                    input_shape=(4,),
+                                    activation=tf.nn.relu
+                                    ))
+    # add dropout layer
+    model.add(tf.keras.layers.Dropout(dropout_rate))
+
+    # add any additional dense layers
+    for i in range(layers - 1):
+        model.add(tf.keras.layers.Dense(neurons,
+                                        activation=tf.nn.relu
+                                        ))
+
+    # add output layer
+    model.add(tf.keras.layers.Dense(3))
+
+    # return the model
+    return model
+
+
 # +++ loss functions +++
 
 def mean_loss(model: tf.keras.Model,
@@ -121,6 +164,21 @@ def abs_loss(model: tf.keras.Model,
     """
     y_ = model(model_input)
     return tf.losses.absolute_difference(labels=model_target, predictions=y_)
+
+
+def single_absolute_error(target: list, prediction: list):
+    """Calculates the absolute error of an array given a target,
+    by addition of absolut differences
+
+    :param target: target|teacher values
+    :param prediction: actual value
+    :return: the absolut error
+    """
+    error = 0
+    differences = np.subtract(target, prediction)
+    absolute_diffs = np.absolute(differences)
+    absolute_error = np.sum(absolute_diffs, axis=None, dtype=np.float32)
+    return absolute_error
 
 
 def rmse_loss(model: tf.keras.Model,
@@ -282,17 +340,8 @@ def build_forward_model():
     test_dataset = test_dataset.shuffle(100)
 
     # get the model
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(_neurons,
-                              input_shape=(4,),
-                              activation=tf.nn.relu),
-        tf.keras.layers.Dense(_neurons,
-                              activation=tf.nn.relu),
-        tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(_neurons,
-                              activation=tf.nn.relu),
-        tf.keras.layers.Dense(3)
-    ])
+    model = get_model()
+
 
     # print the models summary
     print(model.summary())
