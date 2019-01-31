@@ -12,15 +12,9 @@ tf.enable_eager_execution()
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
-#model = tf.keras.Sequential([
-#    tf.keras.layers.Dense(20, input_shape=(4,), activation=tf.nn.sigmoid),
-#    tf.keras.layers.Dense(20, activation=tf.nn.sigmoid),
-#    tf.keras.layers.Dense(3)
-#])
 
 # load saved model
-load_model = True
-#load_model = False
+load_model = False
 model_path = "models/model_40-40_10e_drop.h5"
 
 if load_model:
@@ -29,7 +23,11 @@ if load_model:
         compile=False
     )
 else:
-    model = fm.build_forward_model()
+    model = fm.build_forward_model(epochs=10,
+                                   neurons=20,
+                                   hidden_layers=1,
+                                   loss=fm.abs_loss,
+                                   plot_performance=False)
 
 print(model.summary())
 #
@@ -48,7 +46,8 @@ print(model.summary())
 #     plt.show()
 
 steps = 200
-plan = [0] * (steps - 1) # because we count s_0 as a "step"
+# because we count s_0 as a "step"
+plan = [0] * (steps - 1)
 sim_states = pend.run_simulation(steps=steps)
 s_0 = sim_states[0]
 pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
@@ -72,12 +71,12 @@ for state in pred_states:
 
 
 plot_list = [
-    { "values": sim_cos, "label": "sim_cos", "format": "g-"},
-    { "values": sim_sin, "label": "sim_sin", "format": "b-"},
-    { "values": sim_dot, "label": "sim_dot", "format": "r-"},
+    {"values": sim_cos, "label": "sim_cos", "format": "g-"},
+    {"values": sim_sin, "label": "sim_sin", "format": "b-"},
+    {"values": sim_dot, "label": "sim_dot", "format": "r-"},
     {"values": pred_cos, "label": "pred_cos", "format": "g--"},
     {"values": pred_sin, "label": "pred_sin", "format": "b--"},
-    {"values": pred_dot, "label": "pred_dot", "format": "r--"},]
+    {"values": pred_dot, "label": "pred_dot", "format": "r--"}]
 
 hf.plot_graphs(plot_list)
 

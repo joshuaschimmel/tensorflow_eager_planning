@@ -1,12 +1,9 @@
 import os
 from collections import deque
-import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.python.keras import layers
 import gym
 import json
 
@@ -93,7 +90,7 @@ def get_data(file_path: str,
     return features, labels, test_features, test_labels
 
 
-def get_model(layers: int = 2,
+def get_model(hidden_layers: int = 2,
               neurons: int = 20,
               dropout_rate: float = 0.5
               ) -> tf.keras.models.Model:
@@ -104,14 +101,15 @@ def get_model(layers: int = 2,
     After that, the rest of the Dense layers will be added if
     layers > 1.
 
-    :param layers: Number of fully connected Dense layers
+    :param hidden_layers: Number of fully connected Dense layers
     :param neurons: Number of neuron in each hidden layer
     :param dropout_rate: float for the dropout chance in the
         second "layer"
     :return: the finished Keras model
     """
-    if layers < 1:
-        layers = 1
+    _layers = 0
+    if hidden_layers > 0:
+        _layers = hidden_layers
 
     # prepare model by gettin a simple sequential object
     model = tf.keras.Sequential()
@@ -124,7 +122,7 @@ def get_model(layers: int = 2,
     model.add(tf.keras.layers.Dropout(dropout_rate))
 
     # add any additional dense layers
-    for i in range(layers - 1):
+    for i in range(_layers):
         model.add(tf.keras.layers.Dense(neurons,
                                         activation=tf.nn.relu
                                         ))
@@ -153,8 +151,8 @@ def mean_loss(model: tf.keras.Model,
 
 
 def abs_loss(model: tf.keras.Model,
-              model_input: tf.Tensor,
-              model_target: tf.Tensor):
+             model_input: tf.Tensor,
+             model_target: tf.Tensor):
     """Calculates the absolute difference loss for a model.
 
     :param model: a model the mae is to be calculated for
@@ -174,7 +172,6 @@ def single_absolute_error(target: list, prediction: list):
     :param prediction: actual value
     :return: the absolut error
     """
-    error = 0
     differences = np.subtract(target, prediction)
     absolute_diffs = np.absolute(differences)
     absolute_error = np.sum(absolute_diffs, axis=None, dtype=np.float32)
@@ -193,8 +190,8 @@ def rmse_loss(model: tf.keras.Model,
     """
     model_output = model(model_input)
     return tf.sqrt(tf.losses.mean_squared_error(labels=model_target,
-                                                 predictions=model_output
-                                                 ))
+                                                predictions=model_output
+                                                ))
 
 
 def single_rmse(target: list, value: list) -> float:
@@ -309,96 +306,53 @@ def train_function(model: tf.keras.Model,
     return train_losses, val_losses
 
 
-def build_forward_model():
-    # hyperparameter
-    _epochs = 10
-    _batch_size = 32
-    _test_split = 0.1
-    _validation_split = 0.1
-    _learning_rate = 0.001
-    _shuffle = True
-    _neurons = 20
+def test_model(model: tf.keras.Model,
+               test_set: tf.data.Dataset,
+               loss
+               ) -> list:
+    """Calculates the test loss for every batch in the test_set
 
-    # Reward function in pendulum environment:
-    # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
-
-    # +++ get data +++
-    (features, labels,
-     test_features, test_labels) = get_data("data/pendulum_data.csv",
-                                            _test_split)
-
-    train_dataset = tf.data.Dataset.from_tensor_slices(
-        (tf.cast(features, dtype=tf.float32),
-         tf.cast(labels, dtype=tf.float32)
-         ))
-    train_dataset = train_dataset.shuffle(100)
-
-    test_dataset = tf.data.Dataset.from_tensor_slices(
-        (tf.cast(test_features, dtype=tf.float32),
-         tf.cast(test_labels, dtype=tf.float32)
-         ))
-    test_dataset = test_dataset.shuffle(100)
-
-    # get the model
-    model = get_model()
-
-
-    # print the models summary
-    print(model.summary())
-
-    # choose an optimizer
-    optimizer = tf.train.AdamOptimizer(_learning_rate)
-
-    train_losses, val_losses = train_function(
-        model=model,
-        data=train_dataset,
-        set_len=len(labels),
-        loss=rmse_loss,
-        optimizer=optimizer,
-        epochs=_epochs,
-        batch_size=_batch_size,
-        validation_split=_validation_split,
-        shuffle=_shuffle
-    )
-
-    # +++ save the model +++
-    # save_model(model, "forward_model.h5")
-
-    # +++ calculate test loss +++
-
+    :param model: Keras model
+    :param test_set: test_data set
+    :param loss: loss function
+    :return: list of losses
+    """
     test_losses = []
-    test_dataset = test_dataset.batch(_batch_size)
-    for feature, label in test_dataset:
-        test_losses.append(mean_loss(model, feature, label))
+    for feature, label in test_set:
+        test_losses.append(loss(model, feature, label))
+    print(f"Mean test loss: {np.mean(test_losses)}")
+    return test_losses
 
-    print(f"Test loss: {np.mean(test_losses)}")
 
-    # +++ plot the metrics +++
+def plot_model_performance(training_x, training_y,
+                           validation_x, validation_y,
+                           test_x, test_y):
+    """Prints the metrices for the model
 
-    # use epochs as scale where a tick represents the end of an epoch
-    train_loss_x_axis = np.arange(0,
-                                  _epochs,
-                                  np.divide(_epochs, len(train_losses))
-                                  )
-
-    val_loss_x_axis = np.arange(1,
-                                _epochs + 1,
-                                np.divide(_epochs, len(val_losses)))
-
+    :param training_x: Training Step in all epoch
+    :param training_y: Error during training
+    :param validation_x: Validation after each epoch
+    :param validation_y: Error during validation
+    :param test_x: Values of max epoch
+    :param test_y: Test_Error after last epoch
+    :return:
+    """
     plt.figure()
     # Train loss
-    plt.plot(train_loss_x_axis, train_losses, label="Training Loss")
+    plt.plot(training_x,
+             training_y,
+             label="Training Loss")
 
     # Validation loss
-    plt.plot(val_loss_x_axis,
-             val_losses,
+    plt.plot(validation_x,
+             validation_y,
              "--",
              label="Validation Loss",
              linewidth=2)
 
     # Test loss
-    plt.plot([_epochs],
-             [np.mean(test_losses)],
+    plt.plot(test_x,
+             test_y,
              "r+",
              label="Test Loss",
              markersize=10,
@@ -406,12 +360,119 @@ def build_forward_model():
              )
 
     plt.xlabel("End of Epoch #")
-    plt.ylabel("MSE")
+    plt.ylabel("Error Value")
     plt.grid(b=True, alpha=0.25, linestyle="--")
     plt.tick_params(axis="both", which="major", direction="out")
     plt.legend()
 
     plt.show()
+
+
+def build_forward_model(
+    epochs: int = 10,
+    batch_size: int = 32,
+    test_split: float = 0.1,
+    validation_split: float = 0.1,
+    learning_rate: float = 0.001,
+    shuffle: bool = True,
+    neurons: int = 20,
+    dropout_rate: float = 0.5,
+    hidden_layers: int = 1,
+    loss=rmse_loss,
+    plot_performance: bool = True
+):
+    """This function is the main function for the training.
+    It takes the hyperparameters as input and feeds them into
+    the model and training functions.
+    Returns the trained model.
+
+    :param epochs: # of iterations over the same dataset
+    :param batch_size: # of entries for a single passthrough
+    :param test_split: in [0,1], proportion of dataset to be saved
+        for testing after the training is complete
+    :param validation_split: in [0,1], proportion of data to be saved
+        during each epoch for validation after the epoch is finished
+    :param learning_rate: rate at which the optimizer will apply the
+        gradients
+    :param shuffle: Whether the dataset should be shuffled before
+        each epoch
+    :param neurons: # of neurons in each hidden layer
+    :param dropout_rate: rate of which connections in the layer
+        will be blocked
+    :param hidden_layers: # of hidden layers in the model
+    :param loss: loss function used for calculating difference
+        between prediction and target values
+    :param plot_performance: whether a final plot with the performance
+        should be made
+    :return: A trained Keras model
+    """
+
+    # Reward function in pendulum environment:
+    # -(theta^2 + 0.1*theta_dt^2 + 0.001*action^2)
+
+    # +++ get data +++
+    (features, labels,
+     test_features, test_labels) = get_data("data/pendulum_data.csv",
+                                            test_split)
+
+    # reformat data into tensors and pre-shuffle them
+    train_dataset = tf.data.Dataset.from_tensor_slices(
+        (tf.cast(features, dtype=tf.float32),
+         tf.cast(labels, dtype=tf.float32)
+         ))
+    train_dataset = train_dataset.shuffle(100)
+    test_dataset = tf.data.Dataset.from_tensor_slices(
+        (tf.cast(test_features, dtype=tf.float32),
+         tf.cast(test_labels, dtype=tf.float32)
+         ))
+    test_dataset = test_dataset.shuffle(100)
+
+    # +++ get the model +++
+    model = get_model(hidden_layers=hidden_layers,
+                      neurons=neurons,
+                      dropout_rate=dropout_rate
+                      )
+    # print the models summary
+    print(model.summary())
+
+    # choose an optimizer
+    optimizer = tf.train.AdamOptimizer(learning_rate)
+
+    train_losses, val_losses = train_function(
+        model=model,
+        data=train_dataset,
+        set_len=len(labels),
+        loss=loss,
+        optimizer=optimizer,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_split=validation_split,
+        shuffle=shuffle
+    )
+
+    # +++ calculate test loss +++
+    test_dataset = test_dataset.batch(batch_size)
+    test_losses = test_model(model,
+                             test_dataset,
+                             loss)
+
+    # +++ plot the metrics +++
+    # use epochs as scale where a tick represents the end of an epoch
+    train_loss_x_axis = np.arange(0,
+                                  epochs,
+                                  np.divide(epochs, len(train_losses))
+                                  )
+
+    val_loss_x_axis = np.arange(1,
+                                epochs + 1,
+                                np.divide(epochs, len(val_losses)))
+
+    if plot_performance:
+        # Plot the performance of the model
+        plot_model_performance(train_loss_x_axis, train_losses,
+                               val_loss_x_axis, val_losses,
+                               [epochs] * len(test_losses), test_losses
+                               )
 
     return model
 
@@ -423,7 +484,7 @@ def predict_states(model: tf.keras.models.Model,
     """Uses the model to predict the state after each step.
 
     :param model: Model used for prediction
-    :param s_0: initial state s_0: [cos, sin, dot]
+    :param state_0: initial state s_0: [cos, sin, dot]
     :param plan: list of actions [a_1, ..., a_n]
     :return: list of predicted states [s_0, ..., s_n]
     """
@@ -445,7 +506,7 @@ def predict_states(model: tf.keras.models.Model,
 
         # shape the input for the model (because of expected batching)
         # into the form [[current_state]]
-        next_input = np.array(next_input).reshape(1,4)
+        next_input = np.array(next_input).reshape(1, 4)
 
         # let the model predict the next state
         prediction = model(next_input).numpy()[0]
@@ -480,13 +541,13 @@ def predict_simulation(predictor: tf.keras.models.Model,
         # render the environment
         env.render(mode="human")
         # get a random action
-        #action = get_action(env.action_space)
+        # action = get_action(env.action_space)
 
         action = np.array([0])
         # build the model input
         s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
         # do a step and get the next state
-        s_1,_,_,_ = env.step(action)
+        s_1, _, _, _ = env.step(action)
         # reassign for next state
         cos, sin, dot = s_1
         # reshape s_1 into a label
