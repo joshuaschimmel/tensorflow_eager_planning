@@ -171,7 +171,7 @@ def abs_loss(model: tf.keras.Model,
                                          )
 
 
-def msa_loss(model: tf.keras.Model,
+def mae_loss(model: tf.keras.Model,
              model_input: tf.Tensor,
              model_target: tf.Tensor):
     """Calculates the Mean Absolute Error for a model given input and target.
