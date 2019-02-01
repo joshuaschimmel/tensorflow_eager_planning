@@ -72,6 +72,24 @@ s_0 = sim_states[0]
 pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
 
 # TODO calculate and plot different loss functions
+mse_list = []
+rmse_list = []
+mae_list = []
+zipped_states = zip(pred_states, sim_states)
+for prediction, target in zipped_states:
+    mse = tf.losses.mean_squared_error(
+        labels=target,
+        predictions=prediction,
+        reduction="weighted_sum_over_batch_size"
+    )
+    mse_list.append(mse)
+    rmse_list.append(tf.sqrt(mse))
+    mae_list.append(tf.losses.absolute_difference(
+        labels=target,
+        predictions=prediction,
+        reduction="weighted_sum_over_batch_size"
+    ))
+    
 
 sim_cos = []
 sim_sin = []
@@ -97,7 +115,11 @@ plot_list = [
     {"values": sim_dot, "label": "sim_dot", "format": "r-"},
     {"values": pred_cos, "label": "pred_cos", "format": "g--"},
     {"values": pred_sin, "label": "pred_sin", "format": "b--"},
-    {"values": pred_dot, "label": "pred_dot", "format": "r--"}]
+    {"values": pred_dot, "label": "pred_dot", "format": "r--"},
+    {"values": mse_list, "label": "mse", "format": "c:"},
+    {"values": rmse_list, "label": "rmse", "format": "m:"},
+    {"values": mae_list, "label":"mae", "format":"y:"},
+]
 
 hf.plot_graphs(title=model_name, plot_list=plot_list)
 
