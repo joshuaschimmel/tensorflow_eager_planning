@@ -13,23 +13,28 @@ print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 #hyperparameters
-_neurons = 20
+_neurons = 40
 _hidden_layer = 1
-_epochs = 10
+_epochs = 2
 _loss_function = fm.rmse_loss
 _drop_rate = 0.5
-_load_model = False
-_save_model = False
+_load_model = True
+_save_model = True
 
-drop_text = "drop"
+drop_text = "nodrop"
 if _drop_rate != 0.0:
-    drop_text = "nodrop"
-neuron_text = (str(_neurons) + '-') * _hidden_layer + str(_neurons)
+    drop_text = "drop"
+neuron_text = (str(_neurons) + '-') \
+              * _hidden_layer \
+              + str(_neurons) + "_" \
+              + str(_loss_function.__name__)
+
 # load saved model
 
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
+# TODO check if model exists
 if _load_model:
     model = tf.keras.models.load_model(
         model_path,
@@ -41,10 +46,10 @@ else:
                                    hidden_layers=_hidden_layer,
                                    loss=_loss_function,
                                    dropout_rate=_drop_rate,
-                                   plot_performance=False)
+                                   plot_performance=True)
 
 print(model.summary())
-#
+print(f"Using {model_name}")
 
 # i = 0
 # for i in range(1):
@@ -65,6 +70,8 @@ plan = [0] * (steps - 1)
 sim_states = pend.run_simulation(steps=steps)
 s_0 = sim_states[0]
 pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
+
+# TODO calculate and plot different loss functions
 
 sim_cos = []
 sim_sin = []
@@ -92,7 +99,7 @@ plot_list = [
     {"values": pred_sin, "label": "pred_sin", "format": "b--"},
     {"values": pred_dot, "label": "pred_dot", "format": "r--"}]
 
-hf.plot_graphs(plot_list)
+hf.plot_graphs(title=model_name, plot_list=plot_list)
 
 
 if _save_model and not _load_model:
