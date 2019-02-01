@@ -12,6 +12,13 @@ tf.enable_eager_execution()
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
+# data ranges
+data_ranges = [
+    [-1.0, 1.0],
+    [-1.0, 1.0],
+    [-8.0, 8.0],
+    [-2.0, 2.0]
+]
 
 # +++ i/o functions +++
 
@@ -54,9 +61,8 @@ def get_data(file_path: str,
     # shuffle the data
     df = df.sample(frac=1).reset_index(drop=True)
 
-    partition_index = int(test_partition * len(df.index))
-
     # partition the data into a training and testing set
+    partition_index = int(test_partition * len(df.index))
     train_df = df.iloc[partition_index:, :]
     test_df = df.iloc[:partition_index, :]
 
@@ -88,6 +94,16 @@ def get_data(file_path: str,
                                   ]].values
 
     return features, labels, test_features, test_labels
+
+
+def normalize_dot() -> list:
+    """Normalizes the world state + action for the pendulum task.
+
+    :param state_list: state of the world + action
+    :return: normalized state + action in shape of input
+    """
+
+
 
 
 def get_model(hidden_layers: int = 2,
