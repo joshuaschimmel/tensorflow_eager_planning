@@ -34,7 +34,7 @@ def get_action(action_space) -> float:
 
 
 def create_training_data(iterations: int = 100,
-                         file_path: str = "pendulum_data.csv"
+                         file_path: str = "data/pendulum_data.csv"
                          ) -> None:
     """Creates training data for the pendulum environment by recording
     the states before and after an action taken.
