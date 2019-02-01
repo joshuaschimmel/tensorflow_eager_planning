@@ -18,6 +18,8 @@ _hidden_layer = 1
 _epochs = 10
 _loss_function = fm.rmse_loss
 _drop_rate = 0.5
+_load_model = False
+_save_model = False
 
 drop_text = "drop"
 if _drop_rate != 0.0:
@@ -25,10 +27,10 @@ if _drop_rate != 0.0:
 neuron_text = (str(_neurons) + '-') * _hidden_layer + str(_neurons)
 # load saved model
 
-load_model = False
-model_path = f"models/model_{neuron_text}_{_epochs}e_{drop_text}.h5"
+model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
+model_path = f"models/{model_name}.h5"
 
-if load_model:
+if _load_model:
     model = tf.keras.models.load_model(
         model_path,
         compile=False
@@ -93,7 +95,7 @@ plot_list = [
 hf.plot_graphs(plot_list)
 
 
-if not load_model:
+if _save_model and not _load_model:
     save_answer = input("save model? [yes|no]")
 
     if save_answer == "yes":

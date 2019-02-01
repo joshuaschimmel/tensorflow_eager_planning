@@ -136,9 +136,9 @@ def get_model(hidden_layers: int = 2,
 
 # +++ loss functions +++
 
-def mean_loss(model: tf.keras.Model,
-              model_input: tf.Tensor,
-              model_target: tf.Tensor):
+def mse_loss(model: tf.keras.Model,
+             model_input: tf.Tensor,
+             model_target: tf.Tensor):
     """Calculates MSE of the model given output and expected values
 
     :param model: a model the mse is to be calculated for
@@ -147,7 +147,11 @@ def mean_loss(model: tf.keras.Model,
     :returns loss value
     """
     y_ = model(model_input)
-    return tf.losses.mean_squared_error(labels=model_target, predictions=y_)
+    _reduction_string = "weighted_sum_over_batch_size"
+    return tf.losses.mean_squared_error(labels=model_target,
+                                        predictions=y_,
+                                        reduction=_reduction_string
+                                        )
 
 
 def abs_loss(model: tf.keras.Model,
@@ -155,27 +159,34 @@ def abs_loss(model: tf.keras.Model,
              model_target: tf.Tensor):
     """Calculates the absolute difference loss for a model.
 
-    :param model: a model the mae is to be calculated for
-    :param model_input: input
-    :param model_target: teacher value
-    :returns loss value
+    :param model: the model used for the prediction
+    :param model_input: input tensor to be used for the prediction
+    :param model_target: wanted output tensor of the prediction
+    :returns loss float Tensor with the shape of target
     """
     y_ = model(model_input)
-    return tf.losses.absolute_difference(labels=model_target, predictions=y_)
+    return tf.losses.absolute_difference(labels=model_target,
+                                         predictions=y_,
+                                         reduction="none"
+                                         )
 
 
-def single_absolute_error(target: list, prediction: list):
-    """Calculates the absolute error of an array given a target,
-    by addition of absolut differences
+def msa_loss(model: tf.keras.Model,
+             model_input: tf.Tensor,
+             model_target: tf.Tensor):
+    """Calculates the Mean Absolute Error for a model given input and target.
 
-    :param target: target|teacher values
-    :param prediction: actual value
-    :return: the absolut error
+    :param model: the model used for the prediction
+    :param model_input: input tensor to be used for the prediction
+    :param model_target: wanted output tensor of the prediction
+    :returns loss float Tensor with the shape of a scalar
     """
-    differences = np.subtract(target, prediction)
-    absolute_diffs = np.absolute(differences)
-    absolute_error = np.sum(absolute_diffs, axis=None, dtype=np.float32)
-    return absolute_error
+    _y = model(model_input)
+    _reduction_string= "weighted_sum_over_batch_size"
+    return tf.losses.absolute_difference(labels=model_target,
+                                         predictions=_y,
+                                         reduction=_reduction_string
+                                         )
 
 
 def rmse_loss(model: tf.keras.Model,
@@ -189,11 +200,14 @@ def rmse_loss(model: tf.keras.Model,
     :return: RMSE value
     """
     model_output = model(model_input)
-    return tf.sqrt(tf.losses.mean_squared_error(labels=model_target,
-                                                predictions=model_output
-                                                ))
+    return tf.sqrt(
+        tf.losses.mean_squared_error(labels=model_target,
+                                     predictions=model_output,
+                                     reduction="weighted_sum_over_batch_size"
+                                     ))
 
 
+@PendingDeprecationWarning
 def single_rmse(target: list, value: list) -> float:
     """Calculates the RMSE for a single value target pair
 
@@ -202,6 +216,21 @@ def single_rmse(target: list, value: list) -> float:
     :return: RMSE
     """
     return np.sqrt(np.mean(np.square(np.subtract(target, value))))
+
+
+@PendingDeprecationWarning
+def single_absolute_error(target: list, prediction: list):
+    """Calculates the absolute error of an array given a target,
+    by addition of absolut differences
+
+    :param target: target|teacher values
+    :param prediction: actual value
+    :return: the absolut error
+    """
+    differences = np.subtract(target, prediction)
+    absolute_diffs = np.absolute(differences)
+    absolute_error = np.sum(absolute_diffs, axis=None, dtype=np.float32)
+    return absolute_error
 
 
 def list_rmse(values: list, targets: list) -> list:
