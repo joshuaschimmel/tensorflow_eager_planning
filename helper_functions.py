@@ -4,15 +4,23 @@ import matplotlib.pyplot as plt
 import pendulum as pend
 
 
-def min_max_normalization(old_value: float,
-                          old_range: dict,
-                          new_range: dict
-                          ) -> float:
-    new_value = ((old_value - old_range["min"])
-                 / (old_range["max"] - old_range["min"])) \
-                * (new_range["max"] - new_range["min"]) \
-                + new_range["min"]
-    return new_value
+def min_max_norm(v : float,
+                 v_min: float, v_max: float,
+                 n_min: float = 0, n_max: float = 1
+                 ) -> float:
+    """Does min/max normalization.
+
+    :param v: value
+    :param v_min: min value
+    :param v_max: max value
+    :param n_min: new min value default 0
+    :param n_max: new max value default 1
+    :return: normalised value
+    """
+    new_v = np.multiply(np.divide((v - v_min), (v_max - v_min)),
+                        (n_max - n_min)
+                        ) + n_min
+    return new_v
 
 
 def plot_graphs(title: str, plot_list: list) -> None:
