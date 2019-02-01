@@ -15,7 +15,7 @@ def min_max_normalization(old_value: float,
     return new_value
 
 
-def plot_graphs(plot_list: list) -> None:
+def plot_graphs(title: str, plot_list: list) -> None:
     """Plots the elements in plot dicts.
 
     Acces every plot plot_list's dict and uses "value" and "label"
@@ -25,6 +25,7 @@ def plot_graphs(plot_list: list) -> None:
     :return: returns nothing
     """
     plt.figure()
+    plt.suptitle(title)
     for plot_data in plot_list:
         plt.plot(plot_data["values"],
                  plot_data["format"],
