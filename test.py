@@ -1,4 +1,5 @@
 import pandas as pd
+import helper_functions as _hp
 
 
 df = pd.read_csv("data/pendulum_data.csv")
@@ -11,30 +12,30 @@ partition_index = int(0.1 * len(df.index))
 train_df = df.iloc[partition_index:, :]
 test_df = df.iloc[:partition_index, :]
 
- # TODO normalize dot and action
-# strip the data and labes from the training sets
+
+# TODO normalize dot and action
+# strip the data and labels from the training sets
 features = train_df.loc[:, [
                                "s_0_cos(theta)",
                                "s_0_sin(theta)",
                                "s_0_theta_dot",
                                "action"
-                           ]].values
+                           ]]
 
-labels = train_df.loc[:, [
-                             "s_1_cos(theta)",
-                             "s_1_sin(theta)",
-                             "s_1_theta_dot"
-                         ]].values
+features.plot()
 
-# do the same for the test data
-test_features = test_df.loc[:, [
-                                   "s_0_cos(theta)",
-                                   "s_0_sin(theta)",
-                                   "s_0_theta_dot",
-                                   "action"
-                               ]].values
+# normalizations
+features.loc[:, "s_0_theta_dot"] = features.loc[:, "s_0_theta_dot"].apply(
+    lambda x: _hp.min_max_norm(v=x,
+                               v_min=-8, v_max=8,
+                               n_min=-1, n_max=1
+                               )
+)
+features.loc[:, "action"] = features.loc[:, "action"].apply(
+    lambda x: _hp.min_max_norm(v=x,
+                               v_min=-2, v_max=2,
+                               n_min=-1, n_max=1
+                               )
+)
 
-test_labels = test_df.loc[:, ["s_1_cos(theta)",
-                              "s_1_sin(theta)",
-                              "s_1_theta_dot"
-                              ]].values
+features.plot()
