@@ -68,8 +68,13 @@ print(f"Using {model_name}")
 
 steps = 200
 # because we count s_0 as a "step"
-plan = [0] * (steps - 1)
-sim_states = pend.run_simulation(steps=steps)
+
+#plan = [0] * (steps - 1)
+plan = []
+for i in range(steps -1):
+    plan.append(np.random.uniform(-2, 2))
+
+sim_states = pend.run_simulation_plan(plan=plan, steps=steps)
 s_0 = sim_states[0]
 pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
 
