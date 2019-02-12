@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from matplotlib import pyplot as plt
 import helper_functions as _hp
 
 
@@ -21,8 +23,21 @@ features = train_df.loc[:, [
                                "s_0_theta_dot",
                                "action"
                            ]]
+labels = train_df.loc[:, [
+                                 "s_1_cos(theta)",
+                                 "s_1_sin(theta)",
+                                 "s_1_theta_dot"
+                             ]]
 
-features.plot()
+print(np.max(labels.loc[:, ["s_1_theta_dot"]]))
+print(np.min(labels.loc[:, ["s_1_theta_dot"]]))
+
+feat_dot = features.loc[:, ["s_0_theta_dot"]]
+lab_dot = labels.loc[:, ["s_1_theta_dot"]]
+ax = lab_dot[:].plot(kind="kde", label="State 0")
+feat_dot[:].plot(kind="kde", label="State 1", ax=ax)
+plt.title("Distribution of theta_dot")
+plt.show()
 
 # normalizations
 features.loc[:, "s_0_theta_dot"] = features.loc[:, "s_0_theta_dot"].apply(
@@ -38,4 +53,5 @@ features.loc[:, "action"] = features.loc[:, "action"].apply(
                                )
 )
 
-features.plot()
+#features.plot()
+#plt.show()

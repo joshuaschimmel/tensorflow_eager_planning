@@ -18,8 +18,8 @@ _hidden_layer = 1
 _epochs = 4
 _loss_function = fm.rmse_loss
 _drop_rate = 0.0
-_load_model = False
-_save_model = True
+_load_model = True
+_save_model = False
 
 drop_text = "nodrop"
 if _drop_rate != 0.0:
