@@ -5,6 +5,8 @@ import tensorflow as tf
 import forward_model_tf as fm
 import matplotlib.pyplot as plt
 
+import helper_functions as hp
+
 
 tf.enable_eager_execution()
 
@@ -55,8 +57,24 @@ def create_training_data(iterations: int = 100,
     # [state_t, state_t+1, action, reward]
 
     for i in range(iterations):
+        # initialize the state
+        # theta is in [-pi, pi), thetadot is in [-1,1)
+        # thetadot therefore needs to be stretched to [-8,8)
         state_0 = env.reset()
-        env.render(mode = "rgb_array")
+
+        # get the states from the environment
+        theta, thetadot = env.env.state
+        # scale thetadot form [-1, 1) to [-8, 8) using min/max norm.
+        thetadot = hp.min_max_norm(thetadot,
+                                   v_min=-1, v_max=1,
+                                   n_min=-8, n_max=8
+                                   )
+        # reasign the new state
+        env.env.state = np.array([theta, thetadot])
+        # reasign state_0
+        state_0 = env.env._get_obs()
+
+        env.render(mode = "rgb_array", display=False)
 
         # take a random action
         action = env.action_space.sample()
