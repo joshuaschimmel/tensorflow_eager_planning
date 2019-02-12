@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import helper_functions as _hp
 
 
-df = pd.read_csv("data/pendulum_data.csv")
+df = pd.read_csv("data/pendulum_data_dot_stretched.csv")
 
 # shuffle the data
 df = df.sample(frac=1).reset_index(drop=True)

@@ -15,15 +15,15 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 # hyperparameters
 _neurons = 40
 _hidden_layer = 1
-_epochs = 4
+_epochs = 1
 _loss_function = fm.rmse_loss
-_drop_rate = 0.0
+_drop_rate = 0.5
 _load_model = True
-_save_model = False
+#_save_model = False
 
 drop_text = "nodrop"
-if _drop_rate != 0.0:
-    drop_text = "drop"
+if _drop_rate > 0.0:
+    drop_text = f"{_drop_rate}drop"
 neuron_text = (str(_neurons) + '-') \
               * _hidden_layer \
               + str(_neurons) + "_" \
@@ -74,9 +74,9 @@ s_0 = sim_states[0]
 pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
 
 # plot error functions
-mse_list = []
+#mse_list = []
 rmse_list = []
-mae_list = []
+#mae_list = []
 zipped_states = zip(pred_states, sim_states)
 for prediction, target in zipped_states:
     mse = tf.losses.mean_squared_error(
@@ -84,13 +84,13 @@ for prediction, target in zipped_states:
         predictions=prediction,
         reduction="weighted_sum_over_batch_size"
     )
-    mse_list.append(mse)
+    #mse_list.append(mse)
     rmse_list.append(tf.sqrt(mse))
-    mae_list.append(tf.losses.absolute_difference(
-        labels=target,
-        predictions=prediction,
-        reduction="weighted_sum_over_batch_size"
-    ))
+    #mae_list.append(tf.losses.absolute_difference(
+    #    labels=target,
+    #    predictions=prediction,
+    #    reduction="weighted_sum_over_batch_size"
+    #))
     
 
 sim_cos = []
@@ -118,17 +118,14 @@ plot_list = [
     {"values": pred_cos, "label": "pred_cos", "format": "g--"},
     {"values": pred_sin, "label": "pred_sin", "format": "b--"},
     {"values": pred_dot, "label": "pred_dot", "format": "r--"},
-    {"values": mse_list, "label": "mse", "format": "c:"},
-    {"values": rmse_list, "label": "rmse", "format": "m:"},
-    {"values": mae_list, "label": "mae", "format": "y:"}
+    #{"values": mse_list, "label": "mse", "format": "c:"},
+    {"values": rmse_list, "label": "rmse", "format": "c-"},
+    #{"values": mae_list, "label": "mae", "format": "y:"}
 ]
 
 hf.plot_graphs(title=model_name, plot_list=plot_list)
 
 
-if _save_model and not _load_model:
-    save_answer = input("save model? [yes|no]")
-
-    if save_answer == "yes":
-        fm.save_model(model, model_path)
-        print("saved")
+if not _load_model:
+    fm.save_model(model, model_path)
+    print("saved")

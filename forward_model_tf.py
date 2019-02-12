@@ -457,8 +457,10 @@ def build_forward_model(
 
     # +++ get data +++
     (features, labels,
-     test_features, test_labels) = get_data("data/pendulum_data.csv",
-                                            test_split)
+     test_features, test_labels) = get_data(
+        file_path="data/pendulum_data_dot_stretched.csv",
+        test_partition=test_split
+    )
 
     # reformat data into tensors and pre-shuffle them
     train_dataset = tf.data.Dataset.from_tensor_slices(

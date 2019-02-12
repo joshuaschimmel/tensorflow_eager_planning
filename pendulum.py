@@ -74,7 +74,7 @@ def create_training_data(iterations: int = 100,
         # reasign state_0
         state_0 = env.env._get_obs()
 
-        env.render(mode = "rgb_array", display=False)
+        #env.render(mode = "rgb_array")
 
         # take a random action
         action = env.action_space.sample()
