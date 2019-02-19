@@ -104,6 +104,7 @@ def get_plot_losses(predictions, realities):
 
 
 def plot_model_prediction(steps, model, model_name):
+    """TODO Comment"""
     # create a new random plan
     plan = get_random_plan(steps)
 
