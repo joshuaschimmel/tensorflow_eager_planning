@@ -59,7 +59,7 @@ def get_random_plan(steps: int) -> list:
     """
     # initialize a random plan of with _steps steps
     plan = []
-    for i in range(steps - 1):
+    for i in range(steps):
         plan.append(np.random.uniform(-2, 2))
 
     return plan

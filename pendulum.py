@@ -11,23 +11,15 @@ import helper_functions as hp
 tf.enable_eager_execution()
 
 
-def example_run(episodes: int = 20) -> None:
-    """Runs an example of the pendulum simulation.
+def reward_function(state: np.ndarray) -> float:
+    """Returns the reward for a state array
 
-    Args:
-        episodes: # of episodes
+    :param state: state of the pendulum
+    :return: reward value
     """
-    env = gym.make('Pendulum-v0')
-    for episode in range(episodes):
-        observation = env.reset()
-        for i in range(500):
-            env.render()
-            print(observation)
-            action = env.action_space.sample()
-            observation, reward, done, info = env.step(action)
-            if done:
-                print(f"Episode finished after {i+1} timesteps")
-                break
+    # TODO implement reward function
+    reward = 1
+    return 1.0
 
 
 def get_action(action_space) -> float:
@@ -96,6 +88,7 @@ def create_training_data(iterations: int = 100,
         print("Done writing")
 
 
+@DeprecationWarning
 def run_simulation(steps: int = 10) -> list:
     """Runs the simulation for steps steps.
 
@@ -147,7 +140,7 @@ def run_simulation_plan(plan: list) -> list:
 
 
     # save first state in the list
-    simulation_states = []
+    simulation_states = [state_0]
     for action in plan:
         #env.render(mode="human")
         #action = get_action(env.action_space)

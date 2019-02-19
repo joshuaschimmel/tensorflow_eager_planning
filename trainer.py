@@ -1,6 +1,8 @@
 import tensorflow as tf
+import numpy as np
 import forward_model_tf as fm
 import helper_functions as hf
+import pendulum as pend
 
 tf.enable_eager_execution()
 
@@ -63,3 +65,13 @@ print(hf.model_quality_analysis(test_runs=_test_runs,
                                 steps=_steps,
                                 visualize=True,
                                 plot_title=plot_title))
+
+# # beginning of plan optimization
+# [action] = hf.get_random_plan(1)
+# # get random inital state
+# [s_0] = pend.run_simulation_plan([])
+# next_input = np.append(s_0, action).reshape(1, 4)
+#
+# s_1 = model(next_input)
+# print(s_1)
+
