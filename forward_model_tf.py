@@ -205,9 +205,9 @@ def mae_loss(model: tf.keras.Model,
                                          )
 
 
-def rmse_loss(model: tf.keras.Model,
-              model_input: tf.Tensor,
-              model_target: tf.Tensor):
+def rmse_loss_function(model: tf.keras.Model,
+                       model_input: tf.Tensor,
+                       model_target: tf.Tensor):
     """Calculates RMSE of the model given input and teacher values
 
     :param model: a kerase model for which to calculate the RMSE
@@ -219,6 +219,15 @@ def rmse_loss(model: tf.keras.Model,
     return tf.sqrt(
         tf.losses.mean_squared_error(labels=model_target,
                                      predictions=model_output,
+                                     reduction="weighted_sum_over_batch_size"
+                                     ))
+
+
+def rmse_loss(prediction, target):
+    """Sigleton rmse function without need for models."""
+    return tf.sqrt(
+        tf.losses.mean_squared_error(labels=target,
+                                     predictions=prediction,
                                      reduction="weighted_sum_over_batch_size"
                                      ))
 
@@ -423,7 +432,7 @@ def build_forward_model(
     neurons: int = 20,
     dropout_rate: float = 0.5,
     hidden_layers: int = 1,
-    loss=rmse_loss,
+    loss=rmse_loss_function,
     plot_performance: bool = True
 ):
     """This function is the main function for the training.

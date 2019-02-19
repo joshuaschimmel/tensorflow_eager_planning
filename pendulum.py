@@ -119,9 +119,7 @@ def run_simulation(steps: int = 10) -> list:
     return simulation_states
 
 
-def run_simulation_plan(plan: list,
-                        steps: int = 10
-                        ) -> list:
+def run_simulation_plan(plan: list) -> list:
     """Runs the simulation for steps steps.
 
     :param steps: number of steps
