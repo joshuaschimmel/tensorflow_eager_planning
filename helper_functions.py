@@ -52,10 +52,10 @@ def plot_graphs(title: str, plot_list: list) -> None:
 
 
 def get_random_plan(steps: int) -> list:
-    """TODO Comment
+    """Returns a list with random values in [-2, 2] with len steps.
 
-    :param steps:
-    :return:
+    :param steps: length of the list
+    :return: list with random floats
     """
     # initialize a random plan of with _steps steps
     plan = []
@@ -65,19 +65,19 @@ def get_random_plan(steps: int) -> list:
     return plan
 
 
-def get_plot_losses(predictions, realities):
-    # TODO Comment
-    zipped_states = zip(predictions, realities)
-    rmse_list = []
-    for prediction, target in zipped_states:
-        mse = tf.losses.mean_squared_error(
-            labels=target,
-            predictions=prediction,
-            reduction="weighted_sum_over_batch_size"
-        )
-        rmse_list.append(tf.sqrt(mse))
+def calc_simulation_rmse(predictions, targets):
+    """Calculates the RMSE and returns a plot dict with all values.
 
-    # TODO learn to unpack this list
+    Unpacks the lists into a list for each attribute and observation
+    type and adds them to a dict for printing together with the
+    calculated RMSE.
+
+    :param predictions: list of predictions
+    :param targets: list of the actual values
+    :return: dict for function plot_graphs
+    """
+    zipped_states = zip(predictions, targets)
+    rmse_list = []
     sim_cos = []
     sim_sin = []
     sim_dot = []
@@ -85,15 +85,21 @@ def get_plot_losses(predictions, realities):
     pred_sin = []
     pred_dot = []
 
-    for state in realities:
-        sim_cos.append(state[0])
-        sim_sin.append(state[1])
-        sim_dot.append(state[2])
-
-    for state in predictions:
-        pred_cos.append(state[0])
-        pred_sin.append(state[1])
-        pred_dot.append(state[2])
+    for pred, targ in zipped_states:
+        mse = tf.losses.mean_squared_error(
+            labels=targ,
+            predictions=pred,
+            reduction="weighted_sum_over_batch_size"
+        )
+        rmse_list.append(tf.sqrt(mse))
+        # unpack simulation values
+        sim_cos.append(targ[0])
+        sim_sin.append(targ[1])
+        sim_dot.append(targ[2])
+        # unpack predicted values
+        pred_cos.append(pred[0])
+        pred_sin.append(pred[1])
+        pred_dot.append(pred[2])
 
     plot_list = [
         {"values": sim_cos, "label": "sim_cos", "format": "g-"},
@@ -107,8 +113,23 @@ def get_plot_losses(predictions, realities):
     return plot_list
 
 
-def plot_model_prediction(steps, model, model_name):
-    """TODO Comment"""
+def eval_model_predictions(steps, model, model_name):
+    """Evalutes the model for a number of consecutive steps.
+
+    Creates a random plan with length steps. Initiates the simulation
+    in a random starting state and lets it uses the plan as inputs
+    and uses the resulting state as the values to compare the
+    models predictions against.
+    Uses the randomly initialized state as starting state for the
+    model and inputs the action.
+    Then the RMSE will be calculated and plotted against the
+    actual and the predicted states.
+
+    :param steps: # of predictions to make
+    :param model: the model to make the predictions
+    :param model_name: the name of the model (for the plot)
+    :return: nothing
+    """
     # create a new random plan
     plan = get_random_plan(steps)
 
@@ -122,7 +143,7 @@ def plot_model_prediction(steps, model, model_name):
     pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
 
     # plot error functions (good for a single pass)
-    plot_list = get_plot_losses(pred_states, sim_states)
+    plot_list = calc_simulation_rmse(pred_states, sim_states)
     plot_graphs(title=model_name, plot_list=plot_list)
 
 

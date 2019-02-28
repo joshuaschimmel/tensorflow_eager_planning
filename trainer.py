@@ -57,7 +57,7 @@ if not _load_model:
     fm.save_model(model, model_path)
     print("saved")
 
-hf.plot_model_prediction(200, model, model_name)
+hf.eval_model_predictions(200, model, model_name)
 
 plot_title = f"RMSE for {_test_runs} Random Initializations"
 print(hf.model_quality_analysis(test_runs=_test_runs,
