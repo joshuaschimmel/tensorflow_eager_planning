@@ -3,6 +3,7 @@ import numpy as np
 import forward_model_tf as fm
 import helper_functions as hf
 import pendulum as pend
+import optimizer as opti
 
 tf.enable_eager_execution()
 
@@ -57,21 +58,52 @@ if not _load_model:
     fm.save_model(model, model_path)
     print("saved")
 
-hf.eval_model_predictions(200, model, model_name)
 
-plot_title = f"RMSE for {_test_runs} Random Initializations"
-print(hf.model_quality_analysis(test_runs=_test_runs,
-                                model=model,
-                                steps=_steps,
-                                visualize=True,
-                                plot_title=plot_title))
+def reward_f(state: tf.Tensor):
+    """Calculates the reward for a state
 
-# # beginning of plan optimization
-# [action] = hf.get_random_plan(1)
-# # get random inital state
-# [s_0] = pend.run_simulation_plan([])
-# next_input = np.append(s_0, action).reshape(1, 4)
-#
-# s_1 = model(next_input)
-# print(s_1)
+    :param state: A Tensor of shape 3
+    :return: a scalar reinforcement value
+    """
+    reward = -(tf.square(tf.acos(state[0]))
+               + 0.1 * tf.square(state[2]))
+    return reward
+
+
+# +++ do the planning +++
+
+# define the optimizer
+optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+# get a plan with length 1
+plan = hf.get_random_plan(1)
+# initialize the simulation
+sim_states = pend.run_simulation_plan(plan=plan)
+# get the current state
+s_0 = tf.convert_to_tensor(sim_states[0], dtype=tf.float32)
+
+action = tf.convert_to_tensor(plan[0], dtype=tf.float32)
+
+
+#s_0 = tf.random.uniform(shape=(3, 1))
+#action = tf.random.uniform(shape=(1,))
+
+with tf.GradientTape() as tape:
+    # watch the action variable
+    tape.watch(action)
+    action = tf.reshape(action, shape=(1,))
+    # concat the state with the action to get the model input
+    next_input = tf.concat([tf.squeeze(s_0), action], axis=0)
+    # reshape for the model (list of inputs but we only do one)
+    next_input = tf.reshape(next_input, shape=(1, 4))
+    # get the next state prediction
+    s_1 = model(next_input)
+    # flatten the state
+    s_1 = tf.squeeze(s_1)
+    # calculate the loss
+    loss_value = reward_f(s_1)
+
+
+grads = tape.gradient(loss_value, action)
+optimizer.apply_gradients(zip(grads, action),
+                          )
 

@@ -17,9 +17,11 @@ def reward_function(state: np.ndarray) -> float:
     :param state: state of the pendulum
     :return: reward value
     """
-    # TODO implement reward function
-    reward = 1
-    return 1.0
+    # -(theta ^ 2 + 0.1 * theta_dt ^ 2 + 0.001 * action ^ 2)
+    # action will not be used as part of the reward for a state
+    reward = -(np.square(np.arccos(state[0]))
+               + 0.1 * np.square(state[2]))
+    return reward
 
 
 def get_action(action_space) -> float:

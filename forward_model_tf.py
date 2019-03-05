@@ -9,8 +9,6 @@ import json
 
 tf.enable_eager_execution()
 
-print(f"TensorFlow version: {tf.__version__}")
-print(f"Eager execution: {tf.executing_eagerly()}")
 
 # data ranges
 data_ranges = [
