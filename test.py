@@ -10,13 +10,5 @@ print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 
-s_0 = tf.random.uniform(shape=(3, 1))
-action = tf.random.uniform(shape=(1,))
-
-with tf.GradientTape() as tape:
-    tape.watch(action)
-    next_input = tf.concat([tf.squeeze(s_0), action], axis=0)
-
-grads = tape.gradient(next_input, action)
-print(grads)
-
+tensor = tf.convert_to_tensor([1], dtype=tf.float32)
+print(tf.acos(tensor))

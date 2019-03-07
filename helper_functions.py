@@ -55,12 +55,13 @@ def get_random_plan(steps: int) -> list:
     """Returns a list with random values in [-2, 2] with len steps.
 
     :param steps: length of the list
-    :return: list with random floats
+    :return: list with random float32s as tf.Variables
     """
     # initialize a random plan of with _steps steps
     plan = []
     for i in range(steps):
-        plan.append(np.random.uniform(-2, 2))
+        step = tf.Variable(np.random.uniform(-2, 2), dtype=tf.float32)
+        plan.append(step)
 
     return plan
 

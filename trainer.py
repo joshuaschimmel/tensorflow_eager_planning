@@ -4,6 +4,7 @@ import forward_model_tf as fm
 import helper_functions as hf
 import pendulum as pend
 import optimizer as opti
+import copy
 
 tf.enable_eager_execution()
 
@@ -65,7 +66,8 @@ def reward_f(state: tf.Tensor):
     :param state: A Tensor of shape 3
     :return: a scalar reinforcement value
     """
-    reward = -(tf.square(tf.acos(state[0]))
+    reward = -(tf.square(tf.subtract(state[0], 1))
+               + tf.square(state[1])
                + 0.1 * tf.square(state[2]))
     return reward
 
@@ -73,37 +75,99 @@ def reward_f(state: tf.Tensor):
 # +++ do the planning +++
 
 # define the optimizer
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+#optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+_learning_rate = 0.1
+_iterations = 1
 # get a plan with length 1
-plan = hf.get_random_plan(1)
+plan = hf.get_random_plan(20)
+old_plan = copy.deepcopy(plan)
 # initialize the simulation
 sim_states = pend.run_simulation_plan(plan=plan)
-# get the current state
+# get the starting state
 s_0 = tf.convert_to_tensor(sim_states[0], dtype=tf.float32)
 
-action = tf.convert_to_tensor(plan[0], dtype=tf.float32)
-
+# actual_action =
+#action = tf.Variable([plan[0]], dtype=tf.float32)
+#print(action)
 
 #s_0 = tf.random.uniform(shape=(3, 1))
 #action = tf.random.uniform(shape=(1,))
 
-with tf.GradientTape() as tape:
-    # watch the action variable
-    tape.watch(action)
-    action = tf.reshape(action, shape=(1,))
-    # concat the state with the action to get the model input
-    next_input = tf.concat([tf.squeeze(s_0), action], axis=0)
-    # reshape for the model (list of inputs but we only do one)
-    next_input = tf.reshape(next_input, shape=(1, 4))
-    # get the next state prediction
-    s_1 = model(next_input)
-    # flatten the state
-    s_1 = tf.squeeze(s_1)
-    # calculate the loss
-    loss_value = reward_f(s_1)
 
 
-grads = tape.gradient(loss_value, action)
-optimizer.apply_gradients(zip(grads, action),
-                          )
+# algorithm begins here
+for e in range(_iterations):
+    print(f"Iteration {e + 1}")
 
+    # set up the inital states
+    current_state = s_0
+    taken_actions = []
+    derivatives = []
+    grads = []
+
+    # collect the rewards and calculations using the gradient tape
+    with tf.GradientTape(persistent=True) as tape:
+        # iterate over all actions
+        for action in plan:
+            # watch the action variable
+            tape.watch(action)
+            action = tf.reshape(action, shape=(1,))
+            # concat the state with the action to get the model input
+            # for this, squeeze the state by one axis into a list
+            next_input = tf.concat(
+                [tf.squeeze(current_state), action],
+                axis=0
+            )
+            # reshape the input for the model
+            next_input = tf.reshape(next_input, shape=(1, 4))
+            # get the next state prediction
+            current_state = model(next_input)
+            # update the list of already taken actions
+            taken_actions.append(action)
+            # flatten the state and calculate the loss
+            loss_value = reward_f(tf.squeeze(current_state))
+            # add the loss value together with the actions that led up to
+            # it and add them to the list of derivatives
+            derivatives.append([taken_actions.copy(), loss_value])
+
+    # now iterate over all derivative pairs and add the gradients to
+    # the the grads list
+    for actions, loss in derivatives:
+        # initialize counter for list accessing
+        i = 0
+
+        for action in actions:
+            # calculate the gradients for each action
+            grad = tape.gradient(loss, action)
+            # add the gradient to the position in grads corresponding to
+            # the actions position in plan
+            # a bit of EAFP
+            try:
+                # add the grad to the existing one
+                grads[i].append(grad)
+            except IndexError:
+                # initialize a new one
+                grads.append([grad])
+
+            # update counter
+            i += 1
+
+    # iterate over grads and fill the lists with tf constants to get
+    # an even shape
+    # first list is the longes
+    max_len = len(grads[0])
+    for grad_list in grads:
+        while len(grad_list) < max_len:
+            # add zero constants until the lengths are the same
+            grad_list.append(tf.zeros(1))
+
+    # reduce the the grads by summing them up
+    sums = tf.reduce_sum(grads, axis=0)
+
+    # apply the sums to each action
+    for grad, action in zip(sums, plan):
+        # add learning rate
+        action.assign_add(grad * _learning_rate)
+
+print(old_plan)
+print(plan)
