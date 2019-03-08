@@ -29,7 +29,7 @@ class Optimizer:
         self.current_state = None
         self.current_action = None
 
-    def __call__(self, next_state: list) -> tf.Variable:
+    def __call__(self, next_state: list) -> float:
         """Update the state and returns the next action.
 
         Updates the state and adds a new plan step after removing the

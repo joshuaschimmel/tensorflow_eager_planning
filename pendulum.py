@@ -18,7 +18,6 @@ class Pendulum:
         """
         # save the env in a variable
         self.env = gym.make("Pendulum-v0")
-        self.env.render(mode="human")
 
         # initialize the environment. normally you would save
         # the state, but we will do this later
@@ -41,6 +40,8 @@ class Pendulum:
 
         # finally get the initial state
         self.state = self.env.env._get_obs()
+        # render the environment
+        self.env.render(mode="human")
 
     def __call__(self, action: float) -> np.ndarray:
         """Executes the action and returns the resulting state.
@@ -48,10 +49,18 @@ class Pendulum:
         :param action: float in [-2, 2]
         :return: state of the environment [cos, sin, dot]
         """
+        # render the environment
+        self.env.render(mode="human")
+        # do the action
         new_state, reward, done, info = self.env.step([action])
+        # return the new state
         self.state = new_state
 
         return self.get_state()
+
+    def close(self):
+        """Closes the environment."""
+        self.env.close()
 
     def get_state(self) -> np.ndarray:
         """Returns a copy of the current state as a numpy array.
