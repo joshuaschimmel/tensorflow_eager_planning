@@ -94,6 +94,7 @@ optimizer = ot.Optimizer(world_model=model,
                          )
 next_action = optimizer(s_0)
 
+
 print(next_action)
 # actual_action =
 #action = tf.Variable([plan[0]], dtype=tf.float32)

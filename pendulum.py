@@ -8,24 +8,63 @@ import matplotlib.pyplot as plt
 import helper_functions as hp
 
 
-tf.enable_eager_execution()
+class Pendulum:
 
+    def __init__(self):
+        """A wrapper object for the gym pendulum environment.
 
-def reward_function(state: np.ndarray) -> float:
-    """Returns the reward for a state array
+        Handels the simulation in the background and accepts
+        actions in [-2, 2] as input for the state transistions.
+        """
+        # save the env in a variable
+        self.env = gym.make("Pendulum-v0")
+        self.env.render(mode="human")
 
-    :param state: state of the pendulum
-    :return: reward value
-    """
-    # -(theta ^ 2 + 0.1 * theta_dt ^ 2 + 0.001 * action ^ 2)
-    # action will not be used as part of the reward for a state
-    reward = -(np.square(np.arccos(state[0]))
-               + 0.1 * np.square(state[2]))
-    return reward
+        # initialize the environment. normally you would save
+        # the state, but we will do this later
+        self.env.reset()
+
+        # since gym initializes theta in [-pi, pi) and thetadot
+        # in [-1, 1), thetadot needs to be stretched to [-8, 8)
+        # to allow random initialization over the whole statespace.
+        # first, extract the states
+        theta, thetadot = self.env.env.state
+
+        # scale thetadot using min/max normalisation
+        thetadot = hp.min_max_norm(thetadot,
+                                   v_min=-1, v_max=1,
+                                   n_min=-8, n_max=8
+                                   )
+
+        # reassign the state
+        self.env.env.state = np.array([theta, thetadot])
+
+        # finally get the initial state
+        self.state = self.env.env._get_obs()
+
+    def __call__(self, action: float) -> np.ndarray:
+        """Executes the action and returns the resulting state.
+
+        :param action: float in [-2, 2]
+        :return: state of the environment [cos, sin, dot]
+        """
+        new_state, reward, done, info = self.env.step([action])
+        self.state = new_state
+
+        return self.get_state()
+
+    def get_state(self) -> np.ndarray:
+        """Returns a copy of the current state as a numpy array.
+
+        The form of the state is [cos(theta), sin(theta), theta_dot].
+
+        :return: state of the environment
+        """
+        return np.copy(self.state)
 
 
 def get_action(action_space) -> float:
-    """returns an action in the actionspace"""
+    """returns a random action from the actionspace"""
     return action_space.sample()
 
 
@@ -54,7 +93,7 @@ def create_training_data(iterations: int = 100,
         # initialize the state
         # theta is in [-pi, pi), thetadot is in [-1,1)
         # thetadot therefore needs to be stretched to [-8,8)
-        state_0 = env.reset()
+        env.reset()
 
         # get the states from the environment
         theta, thetadot = env.env.state
@@ -68,7 +107,7 @@ def create_training_data(iterations: int = 100,
         # reasign state_0
         state_0 = env.env._get_obs()
 
-        #env.render(mode = "rgb_array")
+        # env.render(mode = "rgb_array")
 
         # take a random action
         action = env.action_space.sample()
@@ -90,43 +129,19 @@ def create_training_data(iterations: int = 100,
         print("Done writing")
 
 
-@DeprecationWarning
-def run_simulation(steps: int = 10) -> list:
-    """Runs the simulation for steps steps.
-
-    :param steps: number of steps
-    :return: list of states as numpy arrays
-    """
-    # initialise simulaiton environtment
-    env = gym.make('Pendulum-v0')
-
-    # get first state
-    s_0 = env.reset()
-    # save first state in the list
-    simulation_states = []
-    for i in range(steps):
-        #env.render(mode="human")
-        action = get_action(env.action_space)
-        s_0, _, _, _ = env.step(np.array([0]))
-        simulation_states.append(s_0)
-
-    env.close()
-    return simulation_states
-
-
 def run_simulation_plan(plan: list) -> list:
-    """Runs the simulation for steps steps.
+    """Runs the simulation by stepping through the plan.
 
-    :param steps: number of steps
+    :param plan: list of actions in [-2, 2]
     :return: list of states as numpy arrays
     """
-    # initialise simulaiton environtment
+    # initialise simulation environment
     env = gym.make('Pendulum-v0')
 
     # initialize the state
     # theta is in [-pi, pi), thetadot is in [-1,1)
     # thetadot therefore needs to be stretched to [-8,8)
-    state_0 = env.reset()
+    env.reset()
 
     # get the states from the environment
     theta, thetadot = env.env.state
@@ -140,17 +155,13 @@ def run_simulation_plan(plan: list) -> list:
     # reasign state_0
     state_0 = env.env._get_obs()
 
-
     # save first state in the list
     simulation_states = [state_0]
     for action in plan:
-        #env.render(mode="human")
-        #action = get_action(env.action_space)
+        # env.render(mode="human")
+        # action = get_action(env.action_space)
         s_0, _, _, _ = env.step(np.array([action]))
         simulation_states.append(s_0)
 
     env.close()
     return simulation_states
-
-
-
