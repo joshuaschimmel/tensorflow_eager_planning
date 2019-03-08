@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 
-class Optimizer():
+class Optimizer:
 
     def __init__(self,
                  world_model: tf.keras.models.Model,
@@ -147,6 +147,16 @@ class Optimizer():
         :return: np array
         """
         return np.array([tf.convert_to_tensor(x).numpy() for x in self.plan])
+
+    def reset(self, plan):
+        """Resets the object and gives it a new starting plan
+
+        :param plan: a new plan
+        :return: Does not return anything
+        """
+        self.current_action = None
+        self.current_state = None
+        self.plan = plan
 
 
 def reinforcement(state: tf.Tensor):
