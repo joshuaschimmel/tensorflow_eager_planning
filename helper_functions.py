@@ -60,10 +60,17 @@ def get_random_plan(steps: int) -> list:
     # initialize a random plan of with _steps steps
     plan = []
     for i in range(steps):
-        step = tf.Variable(np.random.uniform(-2, 2), dtype=tf.float32)
-        plan.append(step)
+        plan.append(get_random_action())
 
     return plan
+
+
+def get_random_action() -> tf.Variable:
+    """Returns a random action as tf Variable in [-2 ,2]
+
+    :return: uniform random tf.Variable in [-2, 2]
+    """
+    return tf.Variable(np.random.uniform(-2, 2), dtype=tf.float32)
 
 
 def calc_simulation_rmse(predictions, targets):
