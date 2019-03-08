@@ -90,12 +90,11 @@ optimizer = ot.Optimizer(world_model=model,
                          learning_rate=_learning_rate,
                          iterations=_iterations,
                          initial_plan=hf.get_random_plan(20),
-                         starting_state=s_0,
                          fill_function=hf.get_random_action
                          )
+next_action = optimizer(s_0)
 
-
-
+print(next_action)
 # actual_action =
 #action = tf.Variable([plan[0]], dtype=tf.float32)
 #print(action)

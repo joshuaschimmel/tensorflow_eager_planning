@@ -85,11 +85,11 @@ class Optimizer:
                     # reshape the input for the model
                     next_input = tf.reshape(next_input, shape=(1, 4))
                     # get the next state prediction
-                    current_state = self.model(next_input)
+                    prediction_state = self.model(next_input)
                     # update the list of already taken actions
                     taken_actions.append(action)
                     # flatten the state and calculate the loss
-                    loss_value = reinforcement(tf.squeeze(current_state))
+                    loss_value = reinforcement(tf.squeeze(prediction_state))
                     # add the loss value together with the actions that
                     # led up to it and add them
                     # to the list of derivatives
