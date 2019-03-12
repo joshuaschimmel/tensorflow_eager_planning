@@ -5,18 +5,23 @@ import helper_functions as hf
 import pendulum as pend
 import optimizer
 
+import copy
+import time
+
 tf.enable_eager_execution()
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 # hyperparameters for the world model
-_neurons = 40
+_neurons = 20
 _hidden_layer = 1
 _epochs = 1
 _loss_function = fm.rmse_loss
-_drop_rate = 0.5
-_load_model = True
+_drop_rate = 0.25
+_load_model = False
+
+
 _steps = 100
 _test_runs = 50
 
@@ -61,8 +66,8 @@ if not _load_model:
 # +++ do the planning +++
 
 # hyperparameters for Optimizer
-_learning_rate = 0.1
-_iterations = 10
+_learning_rate = 0.4
+_iterations = 5
 
 # get the environment
 env = pend.Pendulum()
@@ -71,20 +76,53 @@ env = pend.Pendulum()
 starting_state = env.get_state()
 next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
 
+
 # initialize a random plan
-plan = hf.get_random_plan(20)
+plan = hf.get_random_plan(25)
 
 # intialize the optimizer object
 plan_optimizer = optimizer.Optimizer(world_model=model,
                                      learning_rate=_learning_rate,
                                      iterations=_iterations,
-                                     initial_plan=hf.get_random_plan(20),
+                                     initial_plan=plan,
                                      fill_function=hf.get_random_action
-                                     )
+                                    )
 
 for i in range(1000):
+    print(f"Loss gained {optimizer.reinforcement(next_state)}")
     print(f"Step {i}")
     next_action = plan_optimizer(next_state)
-    print(optimizer.reinforcement(next_state))
     next_state = env(next_action)
 env.close()
+
+
+# TODO Put this into its own function
+# time old model first:
+
+# start_1 = time.time()
+# next_action = plan_optimizer(next_state)
+# next_state = env(next_action)
+# next_action = plan_optimizer(next_state)
+# next_state = env(next_action)
+# next_action = plan_optimizer(next_state)
+# next_state = env(next_action)
+# end_1 = time.time()
+# time_1 = end_1 - start_1
+# print(f"Old Function needed {time_1}")
+#
+# starting_state = env.set_env_state(env_state)
+# next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
+#
+# start_2 = time.time()
+# next_action = modified_plan_optimizer(next_state)
+# next_state = env(next_action)
+# next_action = modified_plan_optimizer(next_state)
+# next_state = env(next_action)
+# next_action = modified_plan_optimizer(next_state)
+# next_state = env(next_action)
+# end_2 = time.time()
+# time_2 = end_2 - start_2
+# print(f"Old Function needed {time_2}")
+#
+# print(f"Diff 1-2: {time_1 - time_2}")
+# print(f"time_1 > time_2: {time_1 > time_2}")

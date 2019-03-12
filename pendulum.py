@@ -71,6 +71,16 @@ class Pendulum:
         """
         return np.copy(self.state)
 
+    def get_env_state(self) -> np.ndarray:
+        return self.env.env.state
+
+    def set_env_state(self, state: np.ndarray) -> np.ndarray:
+        """Sets the state of the environment.
+
+        """
+        self.env.env.state = state
+        self.state = self.env.env._get_obs()
+        return self.state
 
 def get_action(action_space) -> float:
     """returns a random action from the actionspace"""

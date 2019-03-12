@@ -233,7 +233,6 @@ def model_quality_analysis(test_runs: int,
                              linewidth=2
                              )
 
-
         plt.ylim(0, 10)
         plt.grid(b=True, alpha=0.25, linestyle="--")
         plt.tick_params(axis="both", which="major", direction="out")
