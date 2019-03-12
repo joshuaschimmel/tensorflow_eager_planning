@@ -61,32 +61,30 @@ if not _load_model:
 # +++ do the planning +++
 
 # hyperparameters for Optimizer
-_learning_rate = 0.5
-_iterations = 2
+_learning_rate = 0.1
+_iterations = 10
 
 # get the environment
 env = pend.Pendulum()
 
 # get the starting state
 starting_state = env.get_state()
-s_0 = tf.convert_to_tensor(starting_state, dtype=tf.float32)
+next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
 
 # initialize a random plan
-plan = hf.get_random_plan(10)
+plan = hf.get_random_plan(20)
 
 # intialize the optimizer object
-optimizer = optimizer.Optimizer(world_model=model,
-                                learning_rate=_learning_rate,
-                                iterations=_iterations,
-                                initial_plan=hf.get_random_plan(20),
-                                fill_function=hf.get_random_action
-                                )
+plan_optimizer = optimizer.Optimizer(world_model=model,
+                                     learning_rate=_learning_rate,
+                                     iterations=_iterations,
+                                     initial_plan=hf.get_random_plan(20),
+                                     fill_function=hf.get_random_action
+                                     )
 
 for i in range(1000):
     print(f"Step {i}")
-    next_action = optimizer(s_0)
+    next_action = plan_optimizer(next_state)
+    print(optimizer.reinforcement(next_state))
     next_state = env(next_action)
 env.close()
-
-
-

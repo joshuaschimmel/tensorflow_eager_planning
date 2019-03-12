@@ -42,7 +42,7 @@ class Optimizer:
         :return: the next action to be taken
         """
         # reassign to new state
-        self.current_state = next_state
+        self.current_state = tf.convert_to_tensor(next_state, dtype=tf.float32)
         # remove the first element
         self.plan = self.plan[1:]
         # add a new action
@@ -55,8 +55,23 @@ class Optimizer:
         return self.get_numpy_action()
 
     def optimize_plan(self):
-        """Optimizes the plan.
+        """Optimizes the plan using gradient descent.
 
+        This functions first predicts all future states based on the
+        current plan and calculates their corresponding rewards.
+        The rewards are then stored in a list with a copy of all
+        previous actions for later derivation.
+        After all pairs have been made, all derivatives for each
+        reward will be calculated. Those are again saved in a list,
+        for later summation of all gradients for an action.
+        After all gradients have been calculated, the list of
+        list of gradients is reduced by summing all inner gradients.
+        The resulting list contains a final gradient for each action
+        in the plan.
+        Lastly, this function applies the gradients to the plan and
+        returns nothing.
+
+        :return: Nothing.
         """
         for e in range(self.iterations):
             print(f"Iteration {e + 1}")
@@ -134,6 +149,12 @@ class Optimizer:
                 # add learning rate
                 action.assign_add(grad * self.learning_rate)
 
+    def optimize_plan_modified(self):
+        """Tries to improve optimize_plan
+
+        :return:
+        """
+
     def get_numpy_action(self):
         """Returns the current action as a numpy array.
 
@@ -172,4 +193,4 @@ def reinforcement(state: tf.Tensor):
     """
     return -(tf.square(tf.subtract(state[0], 1))
              + tf.square(state[1])
-             + 0.1 * tf.square(state[2]))
+             + 0.05 * tf.square(state[2]))
