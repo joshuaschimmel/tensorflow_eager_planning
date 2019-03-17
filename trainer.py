@@ -14,11 +14,11 @@ print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
 # hyperparameters for the world model
-_neurons = 20
-_hidden_layer = 1
+_neurons = 40
+_hidden_layer = 2
 _epochs = 1
 _loss_function = fm.rmse_loss
-_drop_rate = 0.25
+_drop_rate = 0.5
 _load_model = False
 
 
@@ -66,8 +66,8 @@ if not _load_model:
 # +++ do the planning +++
 
 # hyperparameters for Optimizer
-_learning_rate = 0.4
-_iterations = 5
+_learning_rate = 0.1
+_iterations = 20
 
 # get the environment
 env = pend.Pendulum()
@@ -86,11 +86,16 @@ plan_optimizer = optimizer.Optimizer(world_model=model,
                                      iterations=_iterations,
                                      initial_plan=plan,
                                      fill_function=hf.get_random_action
-                                    )
+                                     )
 
+score = 0
 for i in range(1000):
-    print(f"Loss gained {optimizer.reinforcement(next_state)}")
-    print(f"Step {i}")
+    loss = optimizer.reinforcement(next_state)
+    score += loss
+    print(f"Step {i}\n"
+          f"Loss gained {loss}\n"
+          f"Current score {score}"
+          )
     next_action = plan_optimizer(next_state)
     next_state = env(next_action)
 env.close()

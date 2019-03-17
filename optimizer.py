@@ -123,8 +123,8 @@ class Optimizer:
                     # corresponding to the actions position in plan
                     # a bit of EAFP
                     try:
-                        # add the grad to the existing one
-                        grads[i].append(grad)
+                        # add the grad to the existing list
+                        grads[i] += grad
                     except IndexError:
                         # initialize a new one
                         grads.append([grad])
@@ -135,17 +135,17 @@ class Optimizer:
             # iterate over grads and fill the lists with tf constants to get
             # an even shape
             # first list is the longes
-            max_len = len(grads[0])
-            for grad_list in grads:
-                while len(grad_list) < max_len:
-                    # add zero constants until the lengths are the same
-                    grad_list.append(tf.zeros(1))
+            # max_len = len(grads[0])
+            # for grad_list in grads:
+            #     while len(grad_list) < max_len:
+            #         # add zero constants until the lengths are the same
+            #         grad_list.append(tf.zeros(1))
 
             # reduce the the grads by summing them up
-            sums = tf.reduce_sum(grads, axis=0)
+            # sums = tf.reduce_sum(grads, axis=0)
 
             # apply the sums to each action
-            for grad, action in zip(sums, self.plan):
+            for grad, action in zip(grads, self.plan):
                 # add learning rate
                 action.assign_add(grad * self.learning_rate)
 
@@ -194,7 +194,7 @@ class Optimizer:
                     i = 0
                     for taken_action in taken_actions:
                         # calculate the gradients for each action
-                        grad = tape.gradient(loss_value, action)
+                        grad = tape.gradient(loss_value, taken_action)
                         # add the gradient to the position in grads
                         # corresponding to the actions position in plan
                         # a bit of EAFP
