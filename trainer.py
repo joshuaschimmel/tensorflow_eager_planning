@@ -19,7 +19,7 @@ _hidden_layer = 2
 _epochs = 1
 _loss_function = fm.rmse_loss
 _drop_rate = 0.5
-_load_model = False
+_load_model = True
 
 
 _steps = 100
@@ -67,39 +67,103 @@ if not _load_model:
 
 # hyperparameters for Optimizer
 _learning_rate = 0.1
-_iterations = 20
+_iterations = 2
+
+_test_length = 30
 
 # get the environment
 env = pend.Pendulum()
 
-# get the starting state
-starting_state = env.get_state()
-next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
-
-
 # initialize a random plan
 plan = hf.get_random_plan(25)
+
+# test the old optimizer
+print("Old Optimizer")
+old_times = []
+
+# get the starting state
+env_state = env.get_env_state()
+starting_state = env.get_state()
+next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
 
 # intialize the optimizer object
 plan_optimizer = optimizer.Optimizer(world_model=model,
                                      learning_rate=_learning_rate,
                                      iterations=_iterations,
                                      initial_plan=plan,
-                                     fill_function=hf.get_random_action
+                                     fill_function=hf.get_random_action,
+                                     use_test_function=False
                                      )
 
 score = 0
-for i in range(1000):
-    loss = optimizer.reinforcement(next_state)
+for i in range(_test_length):
+    # check current loss value of the state
+    loss = optimizer.reinforcement(next_state).numpy()
+    # append current loss to total score
     score += loss
-    print(f"Step {i}\n"
+    # print metrices
+    print(f"+++ Step {i} +++\n"
           f"Loss gained {loss}\n"
           f"Current score {score}"
           )
+    # measure the time
+    start_time = time.time()
+    # execute a single planning step
     next_action = plan_optimizer(next_state)
     next_state = env(next_action)
+    # measure the time
+    total_time = time.time() - start_time
+    print(f"Total Time: {total_time}\n")
+    old_times.append(total_time)
+#env.close()
+
+# test the new optimizer
+print("New Optimizer")
+new_times = []
+
+
+env.set_env_state(env_state)
+starting_state = env.get_state()
+next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
+
+# intialize the optimizer object
+plan_optimizer = optimizer.Optimizer(world_model=model,
+                                     learning_rate=_learning_rate,
+                                     iterations=_iterations,
+                                     initial_plan=plan,
+                                     fill_function=hf.get_random_action,
+                                     use_test_function=True
+                                     )
+
+score = 0
+for i in range(_test_length):
+    # check current loss value of the state
+    loss = optimizer.reinforcement(next_state).numpy()
+    # append current loss to total score
+    score += loss
+    # print metrices
+    print(f"+++ Step {i} +++\n"
+          f"Loss gained {loss}\n"
+          f"Current score {score}"
+          )
+    # measure the time
+    start_time = time.time()
+    # execute a single planning step
+    next_action = plan_optimizer(next_state)
+    next_state = env(next_action)
+    # measure the time
+    total_time = time.time() - start_time
+    print(f"Total Time: {total_time}\n")
+    new_times.append(total_time)
 env.close()
 
+old_times = np.array(old_times)
+print(f"Old mean: {old_times.mean()}")
+print(f"Old meadian: {np.median(old_times)}")
+
+new_times = np.array(new_times)
+print(f"New mean: {new_times.mean()}")
+print(f"New meadian: {np.median(new_times)}")
 
 # TODO Put this into its own function
 # time old model first:

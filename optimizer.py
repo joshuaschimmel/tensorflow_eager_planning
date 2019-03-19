@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import time
 
 
 class Optimizer:
@@ -10,6 +11,7 @@ class Optimizer:
                  iterations: int,
                  initial_plan: list,
                  fill_function,
+                 use_test_function: bool = False
                  ):
         """Initializes the Plan Optimizer object.
 
@@ -20,6 +22,8 @@ class Optimizer:
         :param initial_plan: the initial plan
         :param fill_function: a function used to fill the plan with
             new actions
+        :param use_test_function: whether to use a test function.
+            Used for debugging.
         """
         self.model = world_model
         self.learning_rate = learning_rate
@@ -28,6 +32,7 @@ class Optimizer:
         self.new_action = fill_function
         self.current_state = None
         self.current_action = None
+        self.use_test = use_test_function
 
     def __call__(self, next_state: list) -> float:
         """Update the state and returns the next action.
@@ -48,7 +53,10 @@ class Optimizer:
         # add a new action
         self.plan.append(self.new_action())
         # optimize the plan
-        self.optimize_plan()
+        if self.use_test:
+            self.optimize_plan_modified()
+        else:
+            self.optimize_plan()
         # save the current action in a field
         self.current_action = self.plan[0]
         # call the function to return the numpy value of the action
@@ -82,6 +90,9 @@ class Optimizer:
             derivatives = []
             grads = []
 
+            # log the starting time for each iteration
+            start_time = time.time()
+
             # collect the rewards and calculations using
             # gradient tape
             with tf.GradientTape(persistent=True) as tape:
@@ -110,6 +121,10 @@ class Optimizer:
                     # to the list of derivatives
                     derivatives.append([taken_actions.copy(), loss_value])
 
+            # Log time after the tape is done
+            tape_time = time.time()
+            print(f"Tape Time: {start_time - tape_time}")
+
             # now iterate over all derivative pairs and
             # add the gradients to the the grads list
             for actions, loss in derivatives:
@@ -127,10 +142,14 @@ class Optimizer:
                         grads[i] += grad
                     except IndexError:
                         # initialize a new one
-                        grads.append([grad])
+                        grads.append(grad)
 
                     # update counter
                     i += 1
+
+            # Log the time when gradients were calculated
+            grad_time = time.time()
+            print(f"Grad Time: {tape_time - grad_time}")
 
             # iterate over grads and fill the lists with tf constants to get
             # an even shape
@@ -149,6 +168,11 @@ class Optimizer:
                 # add learning rate
                 action.assign_add(grad * self.learning_rate)
 
+            # Log time when the gradients where assigned to the actions
+            end_time = time.time()
+            print(f"Assign Time: {grad_time - end_time}")
+            print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
+
     def optimize_plan_modified(self):
         """Tries to improve optimize_plan
 
@@ -162,6 +186,9 @@ class Optimizer:
             taken_actions = []
             derivatives = []
             grads = []
+
+            # log the starting time for each iteration
+            start_time = time.time()
 
             # collect the rewards and calculations using
             # gradient tape
@@ -208,6 +235,10 @@ class Optimizer:
                         # update counter
                         i += 1
 
+            # Log Tape/Grad time (both the same here)
+            grad_time = time.time()
+            print(f"Grad Time: {start_time - grad_time}")
+
             # iterate over grads and fill the lists with tf constants to get
             # an even shape
             # first list is the longes
@@ -224,6 +255,11 @@ class Optimizer:
             for grad, action in zip(grads, self.plan):
                 # add learning rate
                 action.assign_add(grad * self.learning_rate)
+
+            # Log time when the gradients where assigned to the actions
+            end_time = time.time()
+            print(f"Assign Time: {grad_time - end_time}")
+            print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
 
     def get_numpy_action(self):
         """Returns the current action as a numpy array.
