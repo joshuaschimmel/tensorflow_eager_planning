@@ -91,8 +91,7 @@ plan_optimizer = optimizer.Optimizer(world_model=model,
                                      learning_rate=_learning_rate,
                                      iterations=_iterations,
                                      initial_plan=plan,
-                                     fill_function=hf.get_random_action,
-                                     use_test_function=False
+                                     fill_function=hf.get_random_action
                                      )
 
 score = 0

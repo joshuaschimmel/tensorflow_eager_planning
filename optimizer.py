@@ -11,7 +11,6 @@ class Optimizer:
                  iterations: int,
                  initial_plan: list,
                  fill_function,
-                 use_test_function: bool = False
                  ):
         """Initializes the Plan Optimizer object.
 
@@ -32,7 +31,6 @@ class Optimizer:
         self.new_action = fill_function
         self.current_state = None
         self.current_action = None
-        self.use_test = use_test_function
 
     def __call__(self, next_state: list) -> float:
         """Update the state and returns the next action.
@@ -53,10 +51,7 @@ class Optimizer:
         # add a new action
         self.plan.append(self.new_action())
         # optimize the plan
-        if self.use_test:
-            self.optimize_plan_modified()
-        else:
-            self.optimize_plan()
+        self.optimize_plan()
         # save the current action in a field
         self.current_action = self.plan[0]
         # call the function to return the numpy value of the action
@@ -151,18 +146,6 @@ class Optimizer:
             grad_time = time.time()
             print(f"Grad Time: {tape_time - grad_time}")
 
-            # iterate over grads and fill the lists with tf constants to get
-            # an even shape
-            # first list is the longes
-            # max_len = len(grads[0])
-            # for grad_list in grads:
-            #     while len(grad_list) < max_len:
-            #         # add zero constants until the lengths are the same
-            #         grad_list.append(tf.zeros(1))
-
-            # reduce the the grads by summing them up
-            # sums = tf.reduce_sum(grads, axis=0)
-
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
                 # add learning rate
@@ -173,6 +156,31 @@ class Optimizer:
             print(f"Assign Time: {grad_time - end_time}")
             print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
 
+    def get_numpy_action(self):
+        """Returns the current action as a numpy array.
+
+        :return: numpy array of the action the agent wants to take
+        """
+        return tf.convert_to_tensor(self.current_action).numpy()
+
+    def get_numpy_plan(self):
+        """Returns the plan as an np array of arrays
+
+        :return: np array
+        """
+        return np.array([tf.convert_to_tensor(x).numpy() for x in self.plan])
+
+    def reset(self, plan):
+        """Resets the object and gives it a new starting plan
+
+        :param plan: a new plan
+        :return: Does not return anything
+        """
+        self.current_action = None
+        self.current_state = None
+        self.plan = plan
+
+    @DeprecationWarning
     def optimize_plan_modified(self):
         """Tries to improve optimize_plan
 
@@ -239,18 +247,6 @@ class Optimizer:
             grad_time = time.time()
             print(f"Grad Time: {start_time - grad_time}")
 
-            # iterate over grads and fill the lists with tf constants to get
-            # an even shape
-            # first list is the longes
-            #max_len = len(grads[0])
-            #for grad_list in grads:
-            #    while len(grad_list) < max_len:
-            #        # add zero constants until the lengths are the same
-            #        grad_list.append(tf.zeros(1))
-
-            # reduce the the grads by summing them up
-            #sums = tf.reduce_sum(grads, axis=0)
-
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
                 # add learning rate
@@ -260,30 +256,6 @@ class Optimizer:
             end_time = time.time()
             print(f"Assign Time: {grad_time - end_time}")
             print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
-
-    def get_numpy_action(self):
-        """Returns the current action as a numpy array.
-
-        :return: numpy array of the action the agent wants to take
-        """
-        return tf.convert_to_tensor(self.current_action).numpy()
-
-    def get_numpy_plan(self):
-        """Returns the plan as an np array of arrays
-
-        :return: np array
-        """
-        return np.array([tf.convert_to_tensor(x).numpy() for x in self.plan])
-
-    def reset(self, plan):
-        """Resets the object and gives it a new starting plan
-
-        :param plan: a new plan
-        :return: Does not return anything
-        """
-        self.current_action = None
-        self.current_state = None
-        self.plan = plan
 
 
 def reinforcement(state: tf.Tensor):
