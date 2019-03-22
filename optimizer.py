@@ -97,29 +97,29 @@ class Optimizer:
             # gradient tape
             with tf.GradientTape(persistent=True) as tape:
                 # iterate over all actions
-                for action in self.plan:
-                    # watch the action variable
-                    tape.watch(action)
-                    action = tf.reshape(action, shape=(1,))
-                    # concat the state with the action to get
-                    # the model input. for this, squeeze the state
-                    # by one axis into a list
-                    next_input = tf.concat(
-                        [tf.squeeze(prediction_state), action],
-                        axis=0
-                    )
-                    # reshape the input for the model
-                    next_input = tf.reshape(next_input, shape=(1, 4))
-                    # get the next state prediction
-                    prediction_state = self.model(next_input)
-                    # update the list of already taken actions
-                    taken_actions.append(action)
-                    # flatten the state and calculate the loss
-                    loss_value = reinforcement(tf.squeeze(prediction_state))
-                    # add the loss value together with the actions that
-                    # led up to it and add them
-                    # to the list of derivatives
-                    derivatives.append([taken_actions.copy(), loss_value])
+                action = self.plan[-1]
+                # watch the action variable
+                tape.watch(action)
+                action = tf.reshape(action, shape=(1,))
+                # concat the state with the action to get
+                # the model input. for this, squeeze the state
+                # by one axis into a list
+                next_input = tf.concat(
+                    [tf.squeeze(prediction_state), action],
+                    axis=0
+                )
+                # reshape the input for the model
+                next_input = tf.reshape(next_input, shape=(1, 4))
+                # get the next state prediction
+                prediction_state = self.model(next_input)
+                # update the list of already taken actions
+                taken_actions.append(action)
+                # flatten the state and calculate the loss
+                loss_value = reinforcement(tf.squeeze(prediction_state))
+                # add the loss value together with the actions that
+                # led up to it and add them
+                # to the list of derivatives
+                derivatives.append([taken_actions.copy(), loss_value])
 
             # Log time after the tape is done
             tape_time = time.time()

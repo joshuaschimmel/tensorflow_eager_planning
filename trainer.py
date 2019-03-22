@@ -19,7 +19,7 @@ _hidden_layer = 2
 _epochs = 1
 _loss_function = fm.rmse_loss
 _drop_rate = 0.5
-_load_model = True
+_load_model = False
 
 
 _steps = 100
@@ -66,16 +66,16 @@ if not _load_model:
 # +++ do the planning +++
 
 # hyperparameters for Optimizer
-_learning_rate = 0.1
-_iterations = 2
+_learning_rate = 0.5
+_iterations = 15
 
-_test_length = 30
+_test_length = 3000
 
 # get the environment
 env = pend.Pendulum()
 
 # initialize a random plan
-plan = hf.get_random_plan(25)
+plan = hf.get_random_plan(10)
 
 # test the old optimizer
 print("Old Optimizer")
@@ -115,83 +115,52 @@ for i in range(_test_length):
     total_time = time.time() - start_time
     print(f"Total Time: {total_time}\n")
     old_times.append(total_time)
-#env.close()
-
-# test the new optimizer
-print("New Optimizer")
-new_times = []
-
-
-env.set_env_state(env_state)
-starting_state = env.get_state()
-next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
-
-# intialize the optimizer object
-plan_optimizer = optimizer.Optimizer(world_model=model,
-                                     learning_rate=_learning_rate,
-                                     iterations=_iterations,
-                                     initial_plan=plan,
-                                     fill_function=hf.get_random_action,
-                                     use_test_function=True
-                                     )
-
-score = 0
-for i in range(_test_length):
-    # check current loss value of the state
-    loss = optimizer.reinforcement(next_state).numpy()
-    # append current loss to total score
-    score += loss
-    # print metrices
-    print(f"+++ Step {i} +++\n"
-          f"Loss gained {loss}\n"
-          f"Current score {score}"
-          )
-    # measure the time
-    start_time = time.time()
-    # execute a single planning step
-    next_action = plan_optimizer(next_state)
-    next_state = env(next_action)
-    # measure the time
-    total_time = time.time() - start_time
-    print(f"Total Time: {total_time}\n")
-    new_times.append(total_time)
 env.close()
 
-old_times = np.array(old_times)
-print(f"Old mean: {old_times.mean()}")
-print(f"Old meadian: {np.median(old_times)}")
-
-new_times = np.array(new_times)
-print(f"New mean: {new_times.mean()}")
-print(f"New meadian: {np.median(new_times)}")
-
-# TODO Put this into its own function
-# time old model first:
-
-# start_1 = time.time()
-# next_action = plan_optimizer(next_state)
-# next_state = env(next_action)
-# next_action = plan_optimizer(next_state)
-# next_state = env(next_action)
-# next_action = plan_optimizer(next_state)
-# next_state = env(next_action)
-# end_1 = time.time()
-# time_1 = end_1 - start_1
-# print(f"Old Function needed {time_1}")
+# # test the new optimizer
+# print("New Optimizer")
+# new_times = []
 #
-# starting_state = env.set_env_state(env_state)
+#
+# env.set_env_state(env_state)
+# starting_state = env.get_state()
 # next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
 #
-# start_2 = time.time()
-# next_action = modified_plan_optimizer(next_state)
-# next_state = env(next_action)
-# next_action = modified_plan_optimizer(next_state)
-# next_state = env(next_action)
-# next_action = modified_plan_optimizer(next_state)
-# next_state = env(next_action)
-# end_2 = time.time()
-# time_2 = end_2 - start_2
-# print(f"Old Function needed {time_2}")
+# # intialize the optimizer object
+# plan_optimizer = optimizer.Optimizer(world_model=model,
+#                                      learning_rate=_learning_rate,
+#                                      iterations=_iterations,
+#                                      initial_plan=plan,
+#                                      fill_function=hf.get_random_action,
+#                                      use_test_function=True
+#                                      )
 #
-# print(f"Diff 1-2: {time_1 - time_2}")
-# print(f"time_1 > time_2: {time_1 > time_2}")
+# score = 0
+# for i in range(_test_length):
+#     # check current loss value of the state
+#     loss = optimizer.reinforcement(next_state).numpy()
+#     # append current loss to total score
+#     score += loss
+#     # print metrices
+#     print(f"+++ Step {i} +++\n"
+#           f"Loss gained {loss}\n"
+#           f"Current score {score}"
+#           )
+#     # measure the time
+#     start_time = time.time()
+#     # execute a single planning step
+#     next_action = plan_optimizer(next_state)
+#     next_state = env(next_action)
+#     # measure the time
+#     total_time = time.time() - start_time
+#     print(f"Total Time: {total_time}\n")
+#     new_times.append(total_time)
+# env.close()
+#
+# old_times = np.array(old_times)
+# print(f"Old mean: {old_times.mean()}")
+# print(f"Old meadian: {np.median(old_times)}")
+#
+# new_times = np.array(new_times)
+# print(f"New mean: {new_times.mean()}")
+# print(f"New meadian: {np.median(new_times)}")
