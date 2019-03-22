@@ -1,47 +1,63 @@
 import gym
 import csv
 import numpy as np
-import tensorflow as tf
-import forward_model_tf as fm
-import matplotlib.pyplot as plt
 
 import helper_functions as hp
 
 
 class Pendulum:
 
-    def __init__(self):
+    def __init__(self, render: bool = True, state: list = None):
         """A wrapper object for the gym pendulum environment.
 
         Handels the simulation in the background and accepts
-        actions in [-2, 2] as input for the state transistions.
+        actions in [-2, 2] as input for the state transitions.
+        Can be initialized with a certain state as a list
+        of size 2 as [theta, thetadot] with theta in [-pi, pi)
+        and thetadot in [-8, 8).
+        The rendering of the Visualization can be turned for
+        performance reasons or if it is not needed.
+
+        :param state: list of size 2 as [theta, thetadot] with theta
+            in [-pi, pi) and thetadot in [-8, 8)
+        :param render: whether the visualization should be renderd
         """
         # save the env in a variable
         self.env = gym.make("Pendulum-v0")
+
+        # whether the environment should be rendered
+        self.render = render
 
         # initialize the environment. normally you would save
         # the state, but we will do this later
         self.env.reset()
 
-        # since gym initializes theta in [-pi, pi) and thetadot
-        # in [-1, 1), thetadot needs to be stretched to [-8, 8)
-        # to allow random initialization over the whole statespace.
-        # first, extract the states
-        theta, thetadot = self.env.env.state
+        # use given state if it is not the default
+        if state is not None:
+            theta, thetadot = state
 
-        # scale thetadot using min/max normalisation
-        thetadot = hp.min_max_norm(thetadot,
-                                   v_min=-1, v_max=1,
-                                   n_min=-8, n_max=8
-                                   )
+        # use the initialized state elsewhise
+        else:
+            # since gym initializes theta in [-pi, pi) and thetadot
+            # in [-1, 1), thetadot needs to be stretched to [-8, 8)
+            # to allow random initialization over the whole state
+            # space.
+            # extract the states first
+            theta, thetadot = self.env.env.state
 
+            # scale thetadot using min/max normalisation
+            thetadot = hp.min_max_norm(thetadot,
+                                       v_min=-1, v_max=1,
+                                       n_min=-8, n_max=8
+                                       )
         # reassign the state
         self.env.env.state = np.array([theta, thetadot])
 
         # finally get the initial state
         self.state = self.env.env._get_obs()
         # render the environment
-        self.env.render(mode="human")
+        if self.render:
+            self.env.render(mode="human")
 
     def __call__(self, action: float) -> np.ndarray:
         """Executes the action and returns the resulting state.
@@ -49,12 +65,14 @@ class Pendulum:
         :param action: float in [-2, 2]
         :return: state of the environment [cos, sin, dot]
         """
-        # render the environment
-        self.env.render(mode="human")
         # do the action
         new_state, reward, done, info = self.env.step([action])
         # return the new state
         self.state = new_state
+
+        # render the environment
+        if self.render:
+            self.env.render(mode="human")
 
         return self.get_state()
 
@@ -72,18 +90,21 @@ class Pendulum:
         return np.copy(self.state)
 
     def get_env_state(self) -> np.ndarray:
+        """Gets the state of the backend gym environment object.
+
+        :return: numpy array with [theta, thetadot]
+        """
         return self.env.env.state
 
     def set_env_state(self, state: np.ndarray) -> np.ndarray:
-        """Sets the state of the environment.
-
-        """
+        """Sets the state of the backend gym environment."""
         self.env.env.state = state
         self.state = self.env.env._get_obs()
         return self.state
 
+
 def get_action(action_space) -> float:
-    """returns a random action from the actionspace"""
+    """returns a random action from the action space"""
     return action_space.sample()
 
 
