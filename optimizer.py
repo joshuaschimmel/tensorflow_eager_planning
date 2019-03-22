@@ -21,8 +21,6 @@ class Optimizer:
         :param initial_plan: the initial plan
         :param fill_function: a function used to fill the plan with
             new actions
-        :param use_test_function: whether to use a test function.
-            Used for debugging.
         """
         self.model = world_model
         self.learning_rate = learning_rate
@@ -32,7 +30,7 @@ class Optimizer:
         self.current_state = None
         self.current_action = None
 
-    def __call__(self, next_state: list) -> float:
+    def __call__(self, next_state: list) -> (float, list):
         """Update the state and returns the next action.
 
         Updates the state and adds a new plan step after removing the
@@ -42,7 +40,8 @@ class Optimizer:
 
         :param next_state: a tensor representing the environments
             current state with shape (1, 3)
-        :return: the next action to be taken
+        :return: np.float32, log_dicts the next action to be taken and
+            a list of log dicts
         """
         # reassign to new state
         self.current_state = tf.convert_to_tensor(next_state, dtype=tf.float32)
@@ -51,13 +50,13 @@ class Optimizer:
         # add a new action
         self.plan.append(self.new_action())
         # optimize the plan
-        self.optimize_plan()
+        logs = self.optimize_plan()
         # save the current action in a field
         self.current_action = self.plan[0]
         # call the function to return the numpy value of the action
-        return self.get_numpy_action()
+        return self.get_numpy_action(), logs
 
-    def optimize_plan(self):
+    def optimize_plan(self) -> list:
         """Optimizes the plan using gradient descent.
 
         This functions first predicts all future states based on the
@@ -74,47 +73,54 @@ class Optimizer:
         Lastly, this function applies the gradients to the plan and
         returns nothing.
 
-        :return: Nothing.
+        :return: a list of dictionaries with log data such as a
+            dictionary for measured times and the gradients as an
+            numpy array
+            [{
+             times: {start: timestamp_1, ..., end: timesamp_n},
+             gradients: np.array
+            }]
         """
+        logs = []
         for e in range(self.iterations):
             print(f"Iteration {e + 1}")
+
+            # log the starting time for each iteration
+            start_time = time.time()
 
             # set the initial states
             prediction_state = self.current_state
             taken_actions = []
-            derivatives = []
             grads = []
-
-            # log the starting time for each iteration
-            start_time = time.time()
+            derivatives = []
 
             # collect the rewards and calculations using
             # gradient tape
             with tf.GradientTape(persistent=True) as tape:
                 # iterate over all actions
-                action = self.plan[-1]
-                # watch the action variable
-                tape.watch(action)
-                action = tf.reshape(action, shape=(1,))
-                # concat the state with the action to get
-                # the model input. for this, squeeze the state
-                # by one axis into a list
-                next_input = tf.concat(
-                    [tf.squeeze(prediction_state), action],
-                    axis=0
-                )
-                # reshape the input for the model
-                next_input = tf.reshape(next_input, shape=(1, 4))
-                # get the next state prediction
-                prediction_state = self.model(next_input)
-                # update the list of already taken actions
-                taken_actions.append(action)
-                # flatten the state and calculate the loss
-                loss_value = reinforcement(tf.squeeze(prediction_state))
-                # add the loss value together with the actions that
-                # led up to it and add them
-                # to the list of derivatives
-                derivatives.append([taken_actions.copy(), loss_value])
+                for action in self.plan:
+                    # watch the action variable
+                    tape.watch(action)
+                    action = tf.reshape(action, shape=(1,))
+                    # concat the state with the action to get
+                    # the model input. for this, squeeze the state
+                    # by one axis into a list
+                    next_input = tf.concat(
+                        [tf.squeeze(prediction_state), action],
+                        axis=0
+                    )
+                    # reshape the input for the model
+                    next_input = tf.reshape(next_input, shape=(1, 4))
+                    # get the next state prediction
+                    prediction_state = self.model(next_input)
+                    # update the list of already taken actions
+                    taken_actions.append(action)
+                    # flatten the state and calculate the loss
+                    loss_value = reinforcement(tf.squeeze(prediction_state))
+                    # add the loss value together with the actions that
+                    # led up to it and add them
+                    # to the list of derivatives
+                    derivatives.append([taken_actions.copy(), loss_value])
 
             # Log time after the tape is done
             tape_time = time.time()
@@ -155,6 +161,19 @@ class Optimizer:
             end_time = time.time()
             print(f"Assign Time: {grad_time - end_time}")
             print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
+
+            # append data to the log dict
+            logs.append({
+                "times": {
+                    "start": start_time,
+                    "tape": tape_time,
+                    "grad": grad_time,
+                    "end": end_time
+                },
+                "gradients": np.array(grads)
+            })
+        # return the logs
+        return logs
 
     def get_numpy_action(self):
         """Returns the current action as a numpy array.

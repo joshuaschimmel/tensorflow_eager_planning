@@ -108,7 +108,7 @@ for i in range(_test_length):
     # measure the time
     start_time = time.time()
     # execute a single planning step
-    next_action = plan_optimizer(next_state)
+    next_action, logs = plan_optimizer(next_state)
     next_state = env(next_action)
     # measure the time
     total_time = time.time() - start_time
