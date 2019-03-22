@@ -77,6 +77,7 @@ class Optimizer:
             dictionary for measured times and the gradients as an
             numpy array
             [{
+             iteration: epsilon
              times: {start: timestamp_1, ..., end: timesamp_n},
              gradients: np.array
             }]
@@ -124,7 +125,7 @@ class Optimizer:
 
             # Log time after the tape is done
             tape_time = time.time()
-            print(f"Tape Time: {start_time - tape_time}")
+            print(f"Tape Time: {tape_time - start_time}")
 
             # now iterate over all derivative pairs and
             # add the gradients to the the grads list
@@ -150,7 +151,7 @@ class Optimizer:
 
             # Log the time when gradients were calculated
             grad_time = time.time()
-            print(f"Grad Time: {tape_time - grad_time}")
+            print(f"Grad Time: {grad_time - tape_time}")
 
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
@@ -159,11 +160,12 @@ class Optimizer:
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
-            print(f"Assign Time: {grad_time - end_time}")
-            print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
+            print(f"Assign Time: {end_time - grad_time}")
+            print(f"Iteration {e + 1} Total Time: {end_time - start_time}\n")
 
             # append data to the log dict
             logs.append({
+                "iteration": e,
                 "times": {
                     "start": start_time,
                     "tape": tape_time,
