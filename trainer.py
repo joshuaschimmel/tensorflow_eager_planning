@@ -19,16 +19,14 @@ _hidden_layer = 2
 _epochs = 1
 _loss_function = fm.rmse_loss
 _drop_rate = 0.5
-_load_model = False
+_load_model = True
 
 
 _steps = 100
 _test_runs = 50
 
-
-drop_text = "nodrop"
-if _drop_rate > 0.0:
-    drop_text = f"{_drop_rate}drop"
+# get the model identifier
+drop_text = "nodrop" if _drop_rate == 0 else f"{_drop_rate}drop"
 neuron_text = (str(_neurons) + '-') \
               * _hidden_layer \
               + str(_neurons) + "_" \
@@ -54,14 +52,13 @@ else:
                                    validation_split=0.05,
                                    test_split=0.05,
                                    plot_performance=True)
+    # save the model if it is new
+    fm.save_model(model, model_path)
+    print("saved")
 
 print(model.summary())
 print(f"Using {model_name}")
 
-# save the model if it is new
-if not _load_model:
-    fm.save_model(model, model_path)
-    print("saved")
 
 # +++ do the planning +++
 
@@ -127,7 +124,7 @@ env.close()
 #
 # # intialize the optimizer object
 # plan_optimizer = optimizer.Optimizer(world_model=model,
-#                                      learning_rate=_learning_rate,
+#                                      adaptation_rate=_learning_rate,
 #                                      iterations=_iterations,
 #                                      initial_plan=plan,
 #                                      fill_function=hf.get_random_action,

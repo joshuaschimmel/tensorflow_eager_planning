@@ -23,9 +23,9 @@ class Optimizer:
             new actions
         """
         self.model = world_model
-        self.learning_rate = learning_rate
-        self.iterations = iterations
         self.plan = initial_plan
+        self.adaptation_rate = learning_rate
+        self.iterations = iterations
         self.new_action = fill_function
         self.current_state = None
         self.current_action = None
@@ -55,6 +55,42 @@ class Optimizer:
         self.current_action = self.plan[0]
         # call the function to return the numpy value of the action
         return self.get_numpy_action(), logs
+
+    def get_numpy_action(self):
+        """Returns the current action as a numpy array.
+
+        :return: numpy array of the action the agent wants to take
+        """
+        return tf.convert_to_tensor(self.current_action).numpy()
+
+    def get_numpy_plan(self):
+        """Returns the plan as an np array of arrays
+
+        :return: np array
+        """
+        return np.array([tf.convert_to_tensor(x).numpy() for x in self.plan])
+
+    def set_plan(self, plan: list):
+        """Assigns a new plan to the object"""
+        self.plan = plan
+
+    def set_adaptation_rate(self, rate: float):
+        """Sets a new adaptation rate"""
+        self.adaptation_rate = rate
+
+    def set_iterations(self, iterations: int):
+        """Sets a new number of iterations"""
+        self.iterations = iterations
+
+    def reset(self, plan):
+        """Resets the object and gives it a new starting plan
+
+        :param plan: a new plan
+        :return: Does not return anything
+        """
+        self.current_action = None
+        self.current_state = None
+        self.plan = plan
 
     def optimize_plan(self) -> list:
         """Optimizes the plan using gradient descent.
@@ -155,8 +191,8 @@ class Optimizer:
 
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
-                # add learning rate
-                action.assign_add(grad * self.learning_rate)
+                # add gradients weighted with adaptation rate
+                action.assign_add(grad * self.adaptation_rate)
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
@@ -176,30 +212,6 @@ class Optimizer:
             })
         # return the logs
         return logs
-
-    def get_numpy_action(self):
-        """Returns the current action as a numpy array.
-
-        :return: numpy array of the action the agent wants to take
-        """
-        return tf.convert_to_tensor(self.current_action).numpy()
-
-    def get_numpy_plan(self):
-        """Returns the plan as an np array of arrays
-
-        :return: np array
-        """
-        return np.array([tf.convert_to_tensor(x).numpy() for x in self.plan])
-
-    def reset(self, plan):
-        """Resets the object and gives it a new starting plan
-
-        :param plan: a new plan
-        :return: Does not return anything
-        """
-        self.current_action = None
-        self.current_state = None
-        self.plan = plan
 
     @DeprecationWarning
     def optimize_plan_modified(self):
@@ -271,7 +283,7 @@ class Optimizer:
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
                 # add learning rate
-                action.assign_add(grad * self.learning_rate)
+                action.assign_add(grad * self.adaptation_rate)
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
