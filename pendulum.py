@@ -1,13 +1,17 @@
 import gym
 import csv
 import numpy as np
+from typing import List
 
 import helper_functions as hp
 
 
 class Pendulum:
 
-    def __init__(self, render: bool = True, state: list = None):
+    def __init__(self,
+                 render: bool = True,
+                 state: List[float] = None
+                 ):
         """A wrapper object for the gym pendulum environment.
 
         Handels the simulation in the background and accepts
@@ -33,6 +37,7 @@ class Pendulum:
         self.env.reset()
 
         # use given state if it is not the default
+        # thetadot is assumed to be in [-8, 8)
         if state is not None:
             theta, thetadot = state
 
