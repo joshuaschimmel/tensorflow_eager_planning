@@ -5,3 +5,4 @@ models*
 *.vscode/
 *.parquet
 forward_model.h5
+*.html
