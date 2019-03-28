@@ -4,6 +4,7 @@ import forward_model_tf as fm
 import helper_functions as hf
 import pendulum as pend
 import optimizer
+import planning_cases
 
 import copy
 import time
@@ -28,9 +29,9 @@ _test_runs = 50
 # get the model identifier
 drop_text = "nodrop" if _drop_rate == 0 else f"{_drop_rate}drop"
 neuron_text = (str(_neurons) + '-') \
-              * _hidden_layer \
-              + str(_neurons) + "_" \
-              + str(_loss_function.__name__)
+    * _hidden_layer \
+    + str(_neurons) + "_" \
+    + str(_loss_function.__name__)
 
 # load saved model
 
@@ -59,59 +60,60 @@ else:
 print(model.summary())
 print(f"Using {model_name}")
 
+planning_cases.plan_convergence(model)
 
 # +++ do the planning +++
 
 # hyperparameters for Optimizer
-_learning_rate = 0.5
-_iterations = 15
+# _learning_rate = 0.5
+# _iterations = 15
 
-_test_length = 3000
+# _test_length = 3000
 
-# get the environment
-env = pend.Pendulum()
+# # get the environment
+# env = pend.Pendulum()
 
-# initialize a random plan
-plan = hf.get_random_plan(10)
+# # initialize a random plan
+# plan = hf.get_random_plan(10)
 
-# test the old optimizer
-print("Old Optimizer")
-old_times = []
+# # test the old optimizer
+# print("Old Optimizer")
+# old_times = []
 
-# get the starting state
-env_state = env.get_env_state()
-starting_state = env.get_state()
-next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
+# # get the starting state
+# env_state = env.get_env_state()
+# starting_state = env.get_state()
+# next_state = tf.convert_to_tensor(starting_state, dtype=tf.float32)
 
-# intialize the optimizer object
-plan_optimizer = optimizer.Optimizer(world_model=model,
-                                     learning_rate=_learning_rate,
-                                     iterations=_iterations,
-                                     initial_plan=plan,
-                                     fill_function=hf.get_random_action
-                                     )
+# # intialize the optimizer object
+# plan_optimizer = optimizer.Optimizer(world_model=model,
+#                                      learning_rate=_learning_rate,
+#                                      iterations=_iterations,
+#                                      initial_plan=plan,
+#                                      fill_function=hf.get_random_action
+#                                      )
 
-score = 0
-for i in range(_test_length):
-    # check current loss value of the state
-    loss = optimizer.reinforcement(next_state).numpy()
-    # append current loss to total score
-    score += loss
-    # print metrices
-    print(f"+++ Step {i} +++\n"
-          f"Loss gained {loss}\n"
-          f"Current score {score}"
-          )
-    # measure the time
-    start_time = time.time()
-    # execute a single planning step
-    next_action, logs = plan_optimizer(next_state)
-    next_state = env(next_action)
-    # measure the time
-    total_time = time.time() - start_time
-    print(f"Total Time: {total_time}\n")
-    old_times.append(total_time)
-env.close()
+# score = 0
+# for i in range(_test_length):
+#     # check current loss value of the state
+#     loss = optimizer.reinforcement(next_state).numpy()
+#     # append current loss to total score
+#     score += loss
+#     # print metrices
+#     print(f"+++ Step {i} +++\n"
+#           f"Loss gained {loss}\n"
+#           f"Current score {score}"
+#           )
+#     # measure the time
+#     start_time = time.time()
+#     # execute a single planning step
+#     next_action, logs = plan_optimizer(next_state)
+#     next_state = env(next_action)
+#     # measure the time
+#     total_time = time.time() - start_time
+#     print(f"Total Time: {total_time}\n")
+#     old_times.append(total_time)
+# env.close()
 
 # # test the new optimizer
 # print("New Optimizer")
