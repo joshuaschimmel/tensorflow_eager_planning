@@ -208,7 +208,7 @@ class Optimizer:
                     "grad": grad_time,
                     "end": end_time
                 },
-                "gradients": np.array(grads)
+                "gradients": np.array(grad * self.adaptation_rate)
             })
         # return the logs
         return logs
