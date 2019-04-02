@@ -165,8 +165,9 @@ class Optimizer:
 
             # now iterate over all derivative pairs and
             # add the gradients to the the grads list
+            gradient_log = []
             for actions, loss in derivatives:
-                # initialize counter for list accessing
+                # init counter to assign derivatives to the action
                 i = 0
 
                 for action in actions:
@@ -182,6 +183,18 @@ class Optimizer:
                         # initialize a new one
                         grads.append(grad)
 
+                    # saving every single gradient is not wanted for
+                    # the prodcution code but neccessary for logging
+                    try:
+                        # add the grad to the existing list in the dict
+                        gradient_log[i]["gradients"].append(grad.numpy())
+                    except IndexError:
+                        # initialize a new one
+                        gradient_log.append({
+                            "loss": loss,
+                            "gradients": [grad.numpy()]
+                        })
+
                     # update counter
                     i += 1
 
@@ -190,6 +203,8 @@ class Optimizer:
             print(f"Grad Time: {grad_time - tape_time}")
 
             # apply the sums to each action
+            # use a counter for action discount
+            i = 1
             for grad, action in zip(grads, self.plan):
                 # add gradients weighted with adaptation rate
                 action.assign_add(grad * self.adaptation_rate)
@@ -208,7 +223,7 @@ class Optimizer:
                     "grad": grad_time,
                     "end": end_time
                 },
-                "gradients": np.array(grad * self.adaptation_rate)
+                "gradient_data": gradient_log
             })
         # return the logs
         return logs

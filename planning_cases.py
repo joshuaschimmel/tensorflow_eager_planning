@@ -47,11 +47,26 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
         results.append(logs)
     # flatten results
     results = [log for row in results for log in row]
+
+    """Gradient Logs shape:
+    [
+        {
+            "loss": loss_1,
+            "gradients": [[grad1], ..., [grad_n]]
+        },
+        ...
+        {
+            "loss": loss_n,
+            "gradients": [[grad_n]]
+        }
+    ]
+    """
+
     # change results into list of arrays
     temp = []
     for r in results:
         row = np.array([r["adaptation_rate"], r["iteration"]])
-        temp.append(np.concatenate((row, r["gradients"])))
+        temp.append(np.concatenate((row, r["gradient_data"])))
 
     result = pd.DataFrame(temp)
     # swap running index with string names
