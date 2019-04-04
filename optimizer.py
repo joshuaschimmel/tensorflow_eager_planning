@@ -127,15 +127,23 @@ class Optimizer:
 
             # set the initial states
             prediction_state = self.current_state
+            # list taken actions before the current step
             taken_actions = []
+            # gradients for each action
             grads = []
+            # list of the step in the plan, the actions previously
+            # taken and the resulting loss after the current step
             derivatives = []
+            # log the position, loss and gradients for each action
+            optimization_log = []
 
             # collect the rewards and calculations using
             # gradient tape
             with tf.GradientTape(persistent=True) as tape:
-                # iterate over all actions
-                for action in self.plan:
+                # iterate over all actions and keep track
+                # of the actions index for logging
+                for action_index in range(len(self.plan)):
+                    action = self.plan[action_index]
                     # watch the action variable
                     tape.watch(action)
                     action = tf.reshape(action, shape=(1,))
@@ -157,20 +165,35 @@ class Optimizer:
                     # add the loss value together with the actions that
                     # led up to it and add them
                     # to the list of derivatives
-                    derivatives.append([taken_actions.copy(), loss_value])
+                    derivatives.append([action_index,
+                                        taken_actions.copy(),
+                                        loss_value
+                                        ])
 
             # Log time after the tape is done
             tape_time = time.time()
             print(f"Tape Time: {tape_time - start_time}")
 
-            # now iterate over all derivative pairs and
+            # iterate over all derivative pairs and
             # add the gradients to the the grads list
-            gradient_log = []
-            for actions, loss in derivatives:
+            for action_index, taken_actions, loss in derivatives:
                 # init counter to assign derivatives to the action
                 i = 0
 
-                for action in actions:
+                # logs for each step in the plan
+                step_log = [
+                    # objects adaptation rate
+                    self.adaptation_rate,
+                    # epsilon, current iteration
+                    e,
+                    # current action in th eplan
+                    action_index,
+                    # loss for this action
+                    loss
+                ]
+
+                # calc gradients for all actions taken before this loss
+                for action in taken_actions:
                     # calculate the gradients for each action
                     grad = tape.gradient(loss, action)
                     # add the gradient to the position in grads
@@ -183,20 +206,15 @@ class Optimizer:
                         # initialize a new one
                         grads.append(grad)
 
-                    # saving every single gradient is not wanted for
-                    # the prodcution code but neccessary for logging
-                    try:
-                        # add the grad to the existing list in the dict
-                        gradient_log[i]["gradients"].append(grad.numpy())
-                    except IndexError:
-                        # initialize a new one
-                        gradient_log.append({
-                            "loss": loss,
-                            "gradients": [grad.numpy()]
-                        })
+                    # add the grad to the logging list
+                    step_log.append(grad)
 
                     # update counter
                     i += 1
+
+                # add the log for each action to the whole log list
+                # as a numpy array
+                optimization_log.append(np.array(step_log))
 
             # Log the time when gradients were calculated
             grad_time = time.time()
@@ -216,14 +234,13 @@ class Optimizer:
 
             # append data to the log dict
             logs.append({
-                "iteration": e,
                 "times": {
                     "start": start_time,
                     "tape": tape_time,
                     "grad": grad_time,
                     "end": end_time
                 },
-                "gradient_data": gradient_log
+                "gradient_log": np.array(optimization_log)
             })
         # return the logs
         return logs
