@@ -142,8 +142,8 @@ class Optimizer:
             with tf.GradientTape(persistent=True) as tape:
                 # iterate over all actions and keep track
                 # of the actions index for logging
-                for action_index in range(len(self.plan)):
-                    action = self.plan[action_index]
+                for step in range(len(self.plan)):
+                    action = self.plan[step]
                     # watch the action variable
                     tape.watch(action)
                     action = tf.reshape(action, shape=(1,))
@@ -165,7 +165,7 @@ class Optimizer:
                     # add the loss value together with the actions that
                     # led up to it and add them
                     # to the list of derivatives
-                    derivatives.append([action_index,
+                    derivatives.append([step,
                                         taken_actions.copy(),
                                         loss_value
                                         ])
@@ -176,21 +176,9 @@ class Optimizer:
 
             # iterate over all derivative pairs and
             # add the gradients to the the grads list
-            for action_index, taken_actions, loss in derivatives:
+            for loss_pos, taken_actions, loss in derivatives:
                 # init counter to assign derivatives to the action
-                i = 0
-
-                # logs for each step in the plan
-                step_log = [
-                    # objects adaptation rate
-                    self.adaptation_rate,
-                    # epsilon, current iteration
-                    e,
-                    # current action in th eplan
-                    action_index,
-                    # loss for this action
-                    loss
-                ]
+                taken_action_i = 0
 
                 # calc gradients for all actions taken before this loss
                 for action in taken_actions:
@@ -201,28 +189,36 @@ class Optimizer:
                     # a bit of EAFP
                     try:
                         # add the grad to the existing list
-                        grads[i] += grad
+                        grads[taken_action_i] += grad
                     except IndexError:
                         # initialize a new one
                         grads.append(grad)
 
-                    # add the grad to the logging list
-                    step_log.append(grad)
+                    # add the log for each action to the whole log list
+                    # as a numpy array
+                    optimization_log.append(np.array([
+                        # objects adaptation rate
+                        self.adaptation_rate,
+                        # epsilon, current iteration
+                        e,
+                        # loss for this action
+                        loss,
+                        # the position of the loss
+                        loss_pos,
+                        # the gradient
+                        grad,
+                        # the position of the action
+                        taken_action_i,
+                    ]))
 
                     # update counter
-                    i += 1
-
-                # add the log for each action to the whole log list
-                # as a numpy array
-                optimization_log.append(np.array(step_log))
+                    taken_action_i += 1
 
             # Log the time when gradients were calculated
             grad_time = time.time()
             print(f"Grad Time: {grad_time - tape_time}")
 
             # apply the sums to each action
-            # use a counter for action discount
-            i = 1
             for grad, action in zip(grads, self.plan):
                 # add gradients weighted with adaptation rate
                 action.assign_add(grad * self.adaptation_rate)
@@ -244,83 +240,6 @@ class Optimizer:
             })
         # return the logs
         return logs
-
-    @DeprecationWarning
-    def optimize_plan_modified(self):
-        """Tries to improve optimize_plan
-
-        :return:
-        """
-        for e in range(self.iterations):
-            print(f"Iteration {e + 1}")
-
-            # set the initial states
-            prediction_state = self.current_state
-            taken_actions = []
-            derivatives = []
-            grads = []
-
-            # log the starting time for each iteration
-            start_time = time.time()
-
-            # collect the rewards and calculations using
-            # gradient tape
-            with tf.GradientTape(persistent=True) as tape:
-                # iterate over all actions
-                for action in self.plan:
-                    # watch the action variable
-                    tape.watch(action)
-                    action = tf.reshape(action, shape=(1,))
-                    # concat the state with the action to get
-                    # the model input. for this, squeeze the state
-                    # by one axis into a list
-                    next_input = tf.concat(
-                        [tf.squeeze(prediction_state), action],
-                        axis=0
-                    )
-                    # reshape the input for the model
-                    next_input = tf.reshape(next_input, shape=(1, 4))
-                    # get the next state prediction
-                    prediction_state = self.model(next_input)
-                    # update the list of already taken actions
-                    taken_actions.append(action)
-                    # flatten the state and calculate the loss
-                    loss_value = reinforcement(tf.squeeze(prediction_state))
-                    # add the loss value together with the actions that
-                    # led up to it and add them
-                    # to the list of derivatives
-                    derivatives.append([taken_actions.copy(), loss_value])
-
-                    i = 0
-                    for taken_action in taken_actions:
-                        # calculate the gradients for each action
-                        grad = tape.gradient(loss_value, taken_action)
-                        # add the gradient to the position in grads
-                        # corresponding to the actions position in plan
-                        # a bit of EAFP
-                        try:
-                            # add the grad to the existing one
-                            grads[i] += grad
-                        except IndexError:
-                            # initialize a new one
-                            grads.append(grad)
-
-                        # update counter
-                        i += 1
-
-            # Log Tape/Grad time (both the same here)
-            grad_time = time.time()
-            print(f"Grad Time: {start_time - grad_time}")
-
-            # apply the sums to each action
-            for grad, action in zip(grads, self.plan):
-                # add learning rate
-                action.assign_add(grad * self.adaptation_rate)
-
-            # Log time when the gradients where assigned to the actions
-            end_time = time.time()
-            print(f"Assign Time: {grad_time - end_time}")
-            print(f"Iteration {e + 1} Total Time: {start_time - end_time}\n")
 
 
 def reinforcement(state: tf.Tensor):
