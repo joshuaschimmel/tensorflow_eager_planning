@@ -26,7 +26,7 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     """
     # setup the scenario
     # do 70 iterations
-    iterations = 70
+    iterations = 200
     #iterations = 3
     plan_length = 10
     starting_state = np.array([2, 4])
