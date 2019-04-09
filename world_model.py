@@ -356,6 +356,8 @@ class WorldModelWrapper:
         # generate new data in each epoch
         for e in range(epochs):
 
+            iteration_data = []
+
             for ite in range(iterations):
                 # generate the data for this epoch
 
@@ -370,14 +372,17 @@ class WorldModelWrapper:
                                         ).reshape(1, 4)
                 model_target = next_state.reshape(1, 3)
 
-                # train the model
+                iteration_data.append([ite, model_input, model_target])
+
+            # train the model
+            for i, data, target in iteration_data:
 
                 # calculate loss in GradientTape
                 with tf.GradientTape() as tape:
                     loss_value = loss_function(
                         self.model,
-                        model_input,
-                        model_target
+                        data,
+                        target
                     )
                 # get the gradients
                 grads = tape.gradient(
@@ -393,11 +398,11 @@ class WorldModelWrapper:
 
                 # log loss
                 loss = loss_value.numpy()
-                losses.append(np.array([e, ite, loss]))
+                losses.append(np.array([e, i, loss]))
 
                 # output status to console
                 print(f"Loss {loss} in {e}/{epochs};"
-                      f" {ite}/{iterations}")
+                      f" {i}/{iterations}")
 
             # TODO Validation loss
 
@@ -406,6 +411,7 @@ class WorldModelWrapper:
 
         # generate test data
 
+        # TODO: Add parameter for amount of test data points
         for _ in range(100):
             # reset the environment
             current_state = env.reset()
@@ -423,85 +429,3 @@ class WorldModelWrapper:
 
         # return logs
         return losses, test_losses
-
-
-@PendingDeprecationWarning
-def train_function(model: tf.keras.Model,
-                   data: tf.data.Dataset,
-                   set_len: int,
-                   loss,
-                   optimizer: tf.train.Optimizer,
-                   epochs: int,
-                   validation_split: float,
-                   batch_size: int = 32,
-                   shuffle: bool = True
-                   ) -> (list, list):
-    """Trains a Keras Model using data.
-
-    :param model: The model to be trained
-    :param data: Dataset in the shape (feature, label)
-    :param set_len: The length of the Dataset (sorry)
-    :param loss: The loss function to be applied
-    :param optimizer: The optimizer to apply the loss
-    :param epochs: # of iterations over the training set
-    :param validation_split: Value in [0,1] defining the split of training
-        and validation set.
-    :param batch_size: Size of the batches for a single pass through
-        the network. Default 32.
-    :param shuffle: Whether the Dataset should be shuffled (for each
-        iteration). Default True.
-    :return:
-    """
-
-    # list of losses total
-    train_losses = []
-    val_losses = []
-
-    for epoch in range(epochs):
-        # starting epoch
-
-        # check if shuffle is enabled
-        if shuffle:
-            data.shuffle(100, reshuffle_each_iteration=True)
-
-        # split the validation set off
-        train_data = data.skip(set_len * validation_split)
-        val_data = data.take(set_len * validation_split)
-
-        # batch the data accordingly
-        train_data = train_data.batch(batch_size)
-        val_data = val_data.batch(batch_size)
-
-        for feature, label in train_data:
-            with tf.GradientTape() as tape:
-                loss_value = loss(
-                    model,
-                    feature,
-                    label
-                )
-            train_losses.append(loss_value)
-
-            # get the gradients from the tape
-            grads = tape.gradient(loss_value, model.trainable_variables)
-
-            # apply the gradients using the optimizer
-            optimizer.apply_gradients(
-                zip(grads, model.variables),
-                global_step=tf.train.get_or_create_global_step()
-            )
-
-        # calculate validation loss
-        epoch_val_losses = []
-        # for every batch in val_data: calculate and add the loss
-        for feature, label in val_data:
-            epoch_val_losses.append(
-                loss(model, feature, label)
-            )
-        # then use np.mean to calc the mean val loss
-        val_loss = np.mean(epoch_val_losses)
-        val_losses.append(val_loss)
-
-        # Output the validation loss
-        print(f"Validation loss in Epoch {epoch + 1}: {val_loss}")
-
-    return train_losses, val_losses
