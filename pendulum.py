@@ -1,6 +1,7 @@
 import gym
 import csv
 import numpy as np
+import pandas as pd
 from typing import List
 
 import helper_functions as hp
@@ -114,7 +115,7 @@ def get_action(action_space) -> float:
 
 
 def create_training_data(iterations: int = 100,
-                         file_path: str = "data/pendulum_data.csv"
+                         file_path: str = "data/training.parquet"
                          ) -> None:
     """Creates training data for the pendulum environment by recording
     the states before and after an action taken.
@@ -136,42 +137,30 @@ def create_training_data(iterations: int = 100,
 
     for i in range(iterations):
         # initialize the state
-        # theta is in [-pi, pi), thetadot is in [-1,1)
-        # thetadot therefore needs to be stretched to [-8,8)
-        env.reset()
-
-        # get the states from the environment
-        theta, thetadot = env.env.state
-        # scale thetadot form [-1, 1) to [-8, 8) using min/max norm.
-        thetadot = hp.min_max_norm(thetadot,
-                                   v_min=-1, v_max=1,
-                                   n_min=-8, n_max=8
-                                   )
-        # reasign the new state
-        env.env.state = np.array([theta, thetadot])
-        # reasign state_0
-        state_0 = env.env._get_obs()
+        state_0 = env.reset()
 
         # env.render(mode = "rgb_array")
 
         # take a random action
         action = env.action_space.sample()
         state_1, reward, done, info = env.step(action)
-        data.append([state_0[0], state_0[1], state_0[2],
-                     state_1[0], state_1[1], state_1[2],
-                     action[0],
-                     reward
-                     ])
+        data.append(np.array(state_0[0], state_0[1], state_0[2],
+                             state_1[0], state_1[1], state_1[2],
+                             action[0],
+                             reward
+                             ))
         print(f"Iteration {i}, action: {action[0]}")
 
+    # close the environment
     env.close()
 
-    with open(file_path, "w",
-              newline="", encoding="utf-8") as csvfile:
-        filewriter = csv.writer(csvfile)
-        filewriter.writerow(headers)
-        filewriter.writerows(data)
-        print("Done writing")
+    # save the data in a dataframe for easy saving
+    df = pd.DataFrame(data=data, columns=headers)
+    if file_path is not None:
+        df.to_parquet(file_path, engine="pyarrow")
+        print("Done saving")
+
+    return df
 
 
 def run_simulation_plan(plan: list) -> list:

@@ -1,10 +1,11 @@
 import tensorflow as tf
 import numpy as np
-import forward_model_tf as fm
+import world_model
 import helper_functions as hf
 import pendulum as pend
 import optimizer
 import planning_cases
+import gym
 
 import copy
 import time
@@ -18,7 +19,7 @@ print(f"Eager execution: {tf.executing_eagerly()}")
 _neurons = 40
 _hidden_layer = 2
 _epochs = 1
-_loss_function = fm.rmse_loss
+_loss_function = world_model.rmse_loss
 _drop_rate = 0.5
 _load_model = True
 
@@ -34,34 +35,21 @@ neuron_text = (str(_neurons) + '-') \
     + str(_loss_function.__name__)
 
 # load saved model
-
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
-# TODO check if model exists
-if _load_model:
-    model = tf.keras.models.load_model(
-        model_path,
-        compile=False
-    )
-else:
-    model = fm.build_forward_model(epochs=_epochs,
-                                   neurons=_neurons,
-                                   hidden_layers=_hidden_layer,
-                                   loss=_loss_function,
-                                   dropout_rate=_drop_rate,
-                                   validation_split=0.05,
-                                   test_split=0.05,
-                                   plot_performance=True)
-    # save the model if it is new
-    fm.save_model(model, model_path)
-    print("saved")
 
-print(model.summary())
-print(f"Using {model_name}")
+# planning_cases.plan_convergence(model)
+wm = world_model.WorldModelWrapper()
+wm.build_keras_model(neurons=_neurons, hidden_layers=_hidden_layer)
+env = gym.make("Pendulum-v0")
+loss, test_loss = wm.train_model(env=env,
+                                 steps=3,
+                                 epochs=2
+                                 )
 
-planning_cases.plan_convergence(model)
-
+print(loss, "\n")
+print(test_loss)
 # +++ do the planning +++
 
 # hyperparameters for Optimizer

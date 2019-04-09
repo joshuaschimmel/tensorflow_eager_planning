@@ -5,10 +5,10 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 
 import pendulum as pend
-import forward_model_tf as fm
+import world_model
 
 
-def min_max_norm(v : float,
+def min_max_norm(v: float,
                  v_min: float, v_max: float,
                  n_min: float = 0, n_max: float = 1
                  ) -> float:
@@ -148,7 +148,8 @@ def eval_model_predictions(steps, model, model_name):
     # get starting state
     s_0 = sim_states[0]
     # let the model predict the states
-    pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
+    pred_states = world_model.predict_states(
+        model=model, state_0=s_0, plan=plan)
 
     # plot error functions (good for a single pass)
     plot_list = calc_simulation_rmse(pred_states, sim_states)
@@ -188,15 +189,16 @@ def model_quality_analysis(test_runs: int,
         # get starting state
         s_0 = sim_states[0]
         # let the model predict the states
-        pred_states = fm.predict_states(model=model, state_0=s_0, plan=plan)
+        pred_states = world_model.predict_states(
+            model=model, state_0=s_0, plan=plan)
 
         current_rmse_values = []
         # calculate the rmse
         for pred_state, sim_state in zip(pred_states, sim_states):
             current_rmse_values.append(
-                fm.singleton_rmse_loss(prediction=pred_state,
-                                       target=sim_state
-                                       )
+                world_model.rmse_loss(1, pred_state,
+                                      sim_state
+                                      )
             )
         # append the values to the list of values as an numpy array
         all_rmse_values.append(np.array(current_rmse_values))
