@@ -114,7 +114,7 @@ class WorldModelWrapper:
         self.model = model
 
     def save_model(self,
-                   file_path: str = "data/world_model.h5"
+                   file_path: str = "models/world_model.h5"
                    ):
         """Saves the model to the given path as an HDF5 File.
 
@@ -128,7 +128,7 @@ class WorldModelWrapper:
         self.model.save(file_path)
 
     def load_model(self,
-                   file_path: str = "data/world_model.h5",
+                   file_path: str = "models/world_model.h5",
                    pre_compile: bool = False
                    ) -> tf.keras.Model:
         """Loads and updates the current model from a HDF5-file.
