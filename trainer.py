@@ -38,18 +38,28 @@ neuron_text = (str(_neurons) + '-') \
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
+env = gym.make("Pendulum-v0")
+s_0 = env.reset()
+
+wm = world_model.WorldModelWrapper()
+wm.load_model()
+
+plan = [np.random.uniform(-2, 2) for i in range(10)]
+
+predicted_states = wm.predict_states(s_0, plan)
+print(predicted_states)
 
 # planning_cases.plan_convergence(model)
-wm = world_model.WorldModelWrapper()
-wm.build_keras_model(neurons=_neurons, hidden_layers=_hidden_layer)
-env = gym.make("Pendulum-v0")
-loss, test_loss = wm.train_model(env=env,
-                                 steps=3,
-                                 epochs=2
-                                 )
+# wm = world_model.WorldModelWrapper()
+# wm.build_keras_model(neurons=_neurons, hidden_layers=_hidden_layer)
+# env = gym.make("Pendulum-v0")
+# loss, test_loss = wm.train_model(env=env,
+#                                  steps=3,
+#                                  epochs=2
+#                                  )
 
-print(loss, "\n")
-print(test_loss)
+# print(loss, "\n")
+# print(test_loss)
 # +++ do the planning +++
 
 # hyperparameters for Optimizer

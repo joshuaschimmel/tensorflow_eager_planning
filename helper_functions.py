@@ -52,7 +52,7 @@ def plot_graphs(title: str, plot_list: list) -> None:
 
 
 def get_random_plan(steps: int) -> list:
-    """Returns a list with random values in [-2, 2] with len steps.
+    """Returns a list of random tf Variables for planning.
 
     :param steps: length of the list
     :return: list with random float32s as tf.Variables

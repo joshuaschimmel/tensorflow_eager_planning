@@ -58,49 +58,6 @@ def plot_model_performance(training_x, training_y,
     plt.show()
 
 
-def predict_states(model: tf.keras.models.Model,
-                   state_0: list,
-                   plan: list
-                   ) -> list:
-    """Uses the model to predict the state after each step.
-
-    :param model: Model used for prediction
-    :param state_0: initial state s_0: [cos, sin, dot]
-    :param plan: list of actions [a_1, ..., a_n]
-    :return: list of predicted states [s_0, ..., s_n]
-    """
-    # initial state does not need to be predicted
-    predicted_states = [state_0]
-
-    # use deque for efficient deconstruction of the list
-    plan = deque(plan)
-
-    # get the current state
-    current_state = state_0
-
-    while plan:
-        # get the next action
-        next_action = plan.popleft()
-
-        # merge it with the current state
-        next_input = np.append(current_state, next_action)
-
-        # shape the input for the model (because of expected batching)
-        # into the form [[current_state]]
-        next_input = np.array(next_input).reshape(1, 4)
-
-        # let the model predict the next state
-        prediction = model(next_input).numpy()[0]
-
-        # add the prediction to the return list
-        predicted_states.append(prediction)
-
-        # reassign current state to prediction
-        current_state = prediction
-
-    return predicted_states
-
-
 def predict_simulation(predictor: tf.keras.models.Model,
                        loss,
                        steps: int
@@ -429,3 +386,51 @@ class WorldModelWrapper:
 
         # return logs
         return losses, test_losses
+
+    def predict_states(self,
+                       initial_state: list,
+                       plan: list
+                       ) -> list:
+        """Uses the model to predict the state after each step.
+
+        Starting from a starting state, this function lets the model
+        predict each consecutive state after an action from the plan,
+        which is a list of actions. Returns a list of the predicted
+        states.
+
+        :param initial_state: Initial starting state
+        :type initial_state: list-like array
+        :param plan: list of actions as floats in [-2, 2]
+        :type plan: list
+        :return: list of visited states as numpy arrays
+        :rtype: list
+        """
+        state_0 = np.array(initial_state)
+        # initial state does not need to be predicted
+        predicted_states = [state_0.reshape(3,)]
+
+        # use deque for efficient deconstruction of the list
+        plan = deque(plan)
+
+        # get the current state
+        current_state = state_0
+
+        while plan:
+
+            # get the next action
+            next_action = plan.popleft()
+            # merge it with the current state
+            next_input = np.append(current_state, next_action)
+            # shape the input for the model
+            # into the form [[current_state]]
+            next_input = next_input.reshape(1, 4)
+            # let the model predict the next state
+            prediction = self.model(next_input)
+            # and cast the returned tensor to an np array
+            prediction = prediction.numpy().reshape(3,)
+            # add the prediction to the return list
+            predicted_states.append(prediction)
+            # reassign current state to prediction
+            current_state = prediction
+
+        return predicted_states
