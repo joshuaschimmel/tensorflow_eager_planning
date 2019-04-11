@@ -14,91 +14,6 @@ import pendulum
 tf.enable_eager_execution()
 
 
-def plot_model_performance(training_x, training_y,
-                           validation_x, validation_y,
-                           test_x, test_y):
-    """Prints the metrices for the model
-
-    :param training_x: Training Step in all epoch
-    :param training_y: Error during training
-    :param validation_x: Validation after each epoch
-    :param validation_y: Error during validation
-    :param test_x: Values of max epoch
-    :param test_y: Test_Error after last epoch
-    :return:
-    """
-    plt.figure()
-    # Train loss
-    plt.plot(training_x,
-             training_y,
-             label="Training Loss")
-
-    # Validation loss
-    plt.plot(validation_x,
-             validation_y,
-             "--",
-             label="Validation Loss",
-             linewidth=2)
-
-    # Test loss
-    plt.plot(test_x,
-             test_y,
-             "r+",
-             label="Test Loss",
-             markersize=10,
-             linewidth=10,
-             )
-
-    plt.xlabel("End of Epoch #")
-    plt.ylabel("Error Value")
-    plt.grid(b=True, alpha=0.25, linestyle="--")
-    plt.tick_params(axis="both", which="major", direction="out")
-    plt.legend()
-
-    plt.show()
-
-
-def predict_simulation(predictor: tf.keras.models.Model,
-                       loss,
-                       steps: int
-                       ) -> list:
-    """Uses the predictor to predict the simulation states.
-
-    :param predictor: Model used for prediction.
-    :param loss: A function calculation the loss.
-    :param steps: # of steps to be done in the simulation.
-    :return: List of losses calculated by the loss function.
-    """
-    # build the simulation
-    env = gym.make("Pendulum-v0")
-    prediction_losses = []
-
-    # get the initial state
-    cos, sin, dot = env.reset()
-    for i in range(steps):
-        # render the environment
-        env.render(mode="human")
-        # get a random action
-        # action = get_action(env.action_space)
-
-        action = np.array([0])
-        # build the model input
-        s_0 = np.array([cos, sin, dot, action]).reshape(1, 4)
-        # do a step and get the next state
-        s_1, _, _, _ = env.step(action)
-        # reassign for next state
-        cos, sin, dot = s_1
-        # reshape s_1 into a label
-        s_1 = s_1.reshape(1, 3)
-        # compare the models prediction to reality
-        prediction_loss = loss(predictor, s_0, s_1)
-        print(f"Prediction Loss is: {prediction_loss}")
-        prediction_losses.append(prediction_loss)
-
-    env.close()
-    return prediction_losses
-
-
 def mse_loss(model: tf.keras.Model,
              model_input: tf.Tensor,
              model_target: tf.Tensor
@@ -276,7 +191,7 @@ class WorldModelWrapper:
                                         ))
 
         # add any additional dense layers
-        for i in range(_layers):
+        for _ in range(_layers):
             model.add(tf.keras.layers.Dense(neurons,
                                             activation=tf.nn.relu
                                             ))
