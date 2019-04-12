@@ -209,7 +209,7 @@ class WorldModelWrapper:
         return self.get_model()
 
     def train_model(self,
-                    env: gym.Env,
+                    env: pendulum.Pendulum,
                     iterations: int = 100,
                     steps: int = 1,
                     epochs: int = 10,
