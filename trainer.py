@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import world_model
-import helper_functions as hf
-import pendulum as pend
+#import helper_functions as hf
+import pendulum
 import optimizer
 import planning_cases
 import gym
@@ -38,16 +38,16 @@ neuron_text = (str(_neurons) + '-') \
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
-env = gym.make("Pendulum-v0")
-s_0 = env.reset()
-
 wm = world_model.WorldModelWrapper()
 wm.load_model()
 
-plan = [np.random.uniform(-2, 2) for i in range(10)]
 
-predicted_states = wm.predict_states(s_0, plan)
-print(predicted_states)
+pendulum_env = pendulum.Pendulum(False)
+losses, test_losses = wm.train_model(
+    pendulum_env,
+    max_iterations=10000,
+    steps=100
+)
 
 # planning_cases.plan_convergence(model)
 # wm = world_model.WorldModelWrapper()
