@@ -10,7 +10,7 @@ from typing import List
 class Pendulum:
 
     def __init__(self,
-                 render: bool = True,
+                 render: bool = False,
                  state: List[float] = None
                  ):
         """A wrapper object for the gym pendulum environment.
@@ -140,7 +140,7 @@ def get_state_generator(steps: int):
     try:
         while True:
             # create env and list
-            env = Pendulum()
+            env = Pendulum(render=False)
             rollout_transitions = []
             # get the first state
             current_state = env.get_state()
