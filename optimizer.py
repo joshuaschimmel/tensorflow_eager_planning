@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import time
+import pendulum
 
 
 class Optimizer:
@@ -256,3 +257,27 @@ def reinforcement(state: tf.Tensor):
     return -(tf.square(tf.subtract(state[0], 1))
              + tf.square(state[1])
              + 0.01 * tf.square(state[2]))
+
+
+def get_random_plan(steps: int) -> list:
+    """Returns a list of random tf Variables for planning.
+
+    :param steps: length of the list
+    :return: list with random float32s as tf.Variables
+    """
+    # initialize a random plan of with _steps steps
+    plan = []
+    for _ in range(steps):
+        plan.append(tf.Variable(
+            pendulum.get_random_action(), dtype=tf.float32
+        ))
+
+    return plan
+
+
+def get_random_action() -> tf.Variable:
+    """Returns a random action as tf Variable in [-2 ,2]
+
+    :return: uniform random tf.Variable in [-2, 2]
+    """
+    return tf.Variable(pendulum.get_random_action(), dtype=tf.float32)

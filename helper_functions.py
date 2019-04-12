@@ -51,28 +51,7 @@ def plot_graphs(title: str, plot_list: list) -> None:
     plt.show()
 
 
-def get_random_plan(steps: int) -> list:
-    """Returns a list of random tf Variables for planning.
-
-    :param steps: length of the list
-    :return: list with random float32s as tf.Variables
-    """
-    # initialize a random plan of with _steps steps
-    plan = []
-    for i in range(steps):
-        plan.append(get_random_action())
-
-    return plan
-
-
-def get_random_action() -> tf.Variable:
-    """Returns a random action as tf Variable in [-2 ,2]
-
-    :return: uniform random tf.Variable in [-2, 2]
-    """
-    return tf.Variable(np.random.uniform(-2, 2), dtype=tf.float32)
-
-
+@PendingDeprecationWarning
 def calc_simulation_rmse(predictions, targets):
     """Calculates the RMSE and returns a plot dict with all values.
 
@@ -121,6 +100,7 @@ def calc_simulation_rmse(predictions, targets):
     return plot_list
 
 
+# TODO move to planning cases
 def eval_model_predictions(steps, model, model_name):
     """Evalutes the model for a number of consecutive steps.
 
@@ -156,6 +136,7 @@ def eval_model_predictions(steps, model, model_name):
     plot_graphs(title=model_name, plot_list=plot_list)
 
 
+# TODO move to planning cases
 def model_quality_analysis(test_runs: int,
                            model: tf.keras.Model,
                            steps: int,
