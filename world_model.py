@@ -253,7 +253,6 @@ class WorldModelWrapper:
         :return: DataFrames with the losses for training and testing
         :rtype: Tuple[pd.DataFrame, pd.DataFrame]
         """
-        # TODO use pendulum.py as env
         # choose an optimizer
         optimizer = tf.train.AdamOptimizer(learning_rate)
         losses = []

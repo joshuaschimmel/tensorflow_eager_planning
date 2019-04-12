@@ -9,8 +9,3 @@ tf.enable_eager_execution()
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
-
-
-for x in p.get_state_generator(5):
-    print(x)
-    break

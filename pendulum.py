@@ -137,25 +137,28 @@ def get_state_generator(steps: int):
     :param steps: Number of consecutive steps
     :type steps: int
     """
-    while True:
-        # create env and list
-        env = Pendulum()
-        rollout_transitions = []
-        # get the first state
-        current_state = env.get_state()
-        for _ in range(steps):
-            # get an action
-            next_action = get_random_action()
-            # create the s_0, action tuple
-            last_input = np.append(current_state, next_action)
-            # get the next state
-            current_state = env(next_action)
-            # save the tuple
-            rollout_transitions.append([last_input, current_state])
-        # close the current env
-        env.close()
-        # yield the states
-        yield rollout_transitions
+    try:
+        while True:
+            # create env and list
+            env = Pendulum()
+            rollout_transitions = []
+            # get the first state
+            current_state = env.get_state()
+            for _ in range(steps):
+                # get an action
+                next_action = get_random_action()
+                # create the s_0, action tuple
+                last_input = np.append(current_state, next_action)
+                # get the next state
+                current_state = env(next_action)
+                # save the tuple
+                rollout_transitions.append([last_input, current_state])
+            # close the current env
+            env.close()
+            # yield the states
+            yield rollout_transitions
+    except KeyboardInterrupt:
+        print("Interrupted")
 
 
 @DeprecationWarning
