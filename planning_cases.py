@@ -7,13 +7,14 @@ it needs to set the starting state sometimes.
 :Author: Joshua Schimmelpfennig
 """
 import tensorflow as tf
-import numpy as np
 import pandas as pd
+import numpy as np
 import copy
-# import optimizer as Plan Optimizer
-import optimizer as po
-import pendulum as environment
-import helper_functions as hf
+
+import pendulum
+import world_model
+import plan_optimizer as po
+# import helper_functions as hf
 
 
 def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
@@ -27,15 +28,15 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     # setup the scenario
     # do 70 iterations
     iterations = 200
-    #iterations = 3
+    # iterations = 3
     plan_length = 10
     starting_state = np.array([2, 4])
-    env = environment.Pendulum(render=False, state=starting_state)
+    env = pendulum.Pendulum(render=False, state=starting_state)
     # use plan length 10
-    init_plan = hf.get_random_plan(plan_length)
+    init_plan = pendulum.get_random_plan(plan_length)
     # iterate through these adaptation rates
     adaptation_rates = [10, 5, 1, 0.1]
-    #adaptation_rates = [1]
+    # adaptation_rates = [1]
     # save result arrays in here
     log_list = []
     for rate in adaptation_rates:
@@ -84,7 +85,58 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     # and storage
     result_df = pd.DataFrame(log_list)
     # swap running index with string names
-    #result_df.rename(index=str, columns=str, inplace=True)
+    # result_df.rename(index=str, columns=str, inplace=True)
     result_df.columns = new_columns
     print("saving data")
     result_df.to_parquet("data/grad_logs.parquet", engine="pyarrow")
+
+
+def prediction_accuracy(model: world_model.WorldModelWrapper,
+                        rollouts: int,
+                        steps: int
+                        ) -> pd.DataFrame:
+    """Predicts the truth and saves both in a DataFrame.
+
+    Runs multiple rollouts for mutiple consecutive steps
+    to create a pandas DataFrame for each step with both
+    the prediction and the truth. The states are
+    [cos_theta, sin_theta, theta_dot] and are prepended
+    with "sim_" for the truth and "pre_" for prediction
+    values.
+
+    :param model: A World Model wrapper
+    :type model: world_model.WorldModelWrapper
+    :param rollouts: Number of random initializations
+    :type rollouts: int
+    :param steps: Number of consecutive steps
+    :type steps: int
+    :return: DataFrame with the states
+    :rtype: pd.DataFrame
+    """
+    columns = [
+        "rollout", "step",
+        "sim_cos_theta", "sim_sin_theta", "sim_theta_dot",
+        "pre_cos_theta", "pre_sin_theta", "pre_theta_dot"
+    ]
+    observations = []
+    for r in range(rollouts):
+        plan = pendulum.get_random_plan(steps)
+        # get true states
+        true_states = pendulum.run_simulation_plan(plan)
+        # extract initial state
+        state_0 = true_states[0]
+        # get predictions
+        predicted_states = model.predict_states(initial_state=state_0,
+                                                plan=plan
+                                                )
+        step = 1
+        for truth, prediction in zip(true_states, predicted_states):
+            # unpack the values into an observation
+            observation = [r, step, *truth, *prediction]
+            step += 1
+            observations.append(observation)
+    observations_df = pd.DataFrame(data=observations,
+                                   columns=columns,
+                                   copy=True
+                                   )
+    return observations_df

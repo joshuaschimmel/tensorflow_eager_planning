@@ -1,14 +1,18 @@
-import tensorflow as tf
-import numpy as np
-import world_model
-#import helper_functions as hf
-import pendulum
-import optimizer
-import planning_cases
-import gym
-
 import copy
 import time
+import numpy as np
+import tensorflow as tf
+
+import gym
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import pendulum
+import world_model
+import plan_optimizer
+import planning_cases
+#import helper_functions as hf
+
 
 tf.enable_eager_execution()
 
@@ -40,14 +44,10 @@ model_path = f"models/{model_name}.h5"
 
 wm = world_model.WorldModelWrapper()
 wm.load_model()
+#wm.build_keras_model(neurons=50, hidden_layers=5)
 
-
-pendulum_env = pendulum.Pendulum(False)
-losses, test_losses = wm.train_model(
-    pendulum_env,
-    max_iterations=10000,
-    steps=100
-)
+df = planning_cases.prediction_accuracy(wm, 1000, 200)
+df.to_parquet("data/world_model_prediction.parquet", engine="pyarrow")
 
 # planning_cases.plan_convergence(model)
 # wm = world_model.WorldModelWrapper()
