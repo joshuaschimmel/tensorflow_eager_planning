@@ -4,7 +4,7 @@ import time
 import pendulum
 
 
-class Optimizer:
+class Planner:
 
     def __init__(self,
                  world_model: tf.keras.models.Model,
@@ -13,7 +13,7 @@ class Optimizer:
                  initial_plan: list,
                  fill_function,
                  ):
-        """Initializes the Plan Optimizer object.
+        """Initializes the Planner object.
 
         :param world_model: The model used for the prediction
         :param learning_rate: the rate at whitch gradients are applied
@@ -268,9 +268,7 @@ def get_random_plan(steps: int) -> list:
     # initialize a random plan of with _steps steps
     plan = []
     for _ in range(steps):
-        plan.append(tf.Variable(
-            pendulum.get_random_action(), dtype=tf.float32
-        ))
+        plan.append(get_random_action())
 
     return plan
 
