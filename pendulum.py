@@ -100,6 +100,11 @@ def get_random_action() -> float:
     return np.random.uniform(-2, 2)
 
 
+def get_random_plan(steps: int) -> np.array:
+    """Returns an array with steps random actions."""
+    return np.array([get_random_action() for _ in range(steps)])
+
+
 def run_simulation_plan(plan: list, render: bool = False) -> list:
     """Runs the simulation by iteration through the plan.
 
