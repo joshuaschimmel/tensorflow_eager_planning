@@ -1,16 +1,14 @@
 import os
-from collections import deque
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
 import json
-from typing import List, Tuple
-
+import numpy as np
+import pandas as pd
 import seaborn as sns
+import tensorflow as tf
+from collections import deque
+from typing import List, Tuple
+import matplotlib.pyplot as plt
 
 import gym
-
 import pendulum
 
 tf.enable_eager_execution()
@@ -259,6 +257,7 @@ class WorldModelWrapper:
             # train with an iterator
             for rollout in pendulum.get_state_generator(steps):
                 # break loop if enough iterations have been made
+                # TODO Fix the double if statement
                 if iteration > max_iterations:
                     break
                 for data, target in rollout:
@@ -311,7 +310,6 @@ class WorldModelWrapper:
                 for data, target in rollout:
                     if test_runs > max_tests:
                         break
-                    print(test_runs)
                     # reshape for tensorflow batchsize 1
                     data = data.reshape(1, 4)
                     target = target.reshape(1, 3)

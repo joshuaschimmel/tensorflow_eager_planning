@@ -1,11 +1,11 @@
 import csv
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
 
-import pendulum as pend
 import world_model
+import pendulum as pend
 
 
 def min_max_norm(v: float,
