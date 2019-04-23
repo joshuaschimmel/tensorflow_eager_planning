@@ -86,6 +86,24 @@ def rmse_loss(model: tf.keras.Model,
                                      ))
 
 
+def single_rmse_loss(output: np.array, target: np.array) -> float:
+    """Calculates the RMSE for an output/target pair
+
+    :param output: model output
+    :type output: np.array
+    :param target: model target
+    :type target: np.array
+    :return: RMSE value
+    :rtype: float
+    """
+    # TODO Accept matrices
+    return np.sqrt(
+        np.mean(
+            np.square(
+                np.subtract(output,
+                            target))))
+
+
 class WorldModelWrapper:
 
     def __init__(self):
