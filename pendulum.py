@@ -41,7 +41,7 @@ class Pendulum:
         # if given, set the state
         if state is not None:
             theta, thetadot = state
-            self.env.env.state = np.array(theta, thetadot)
+            self.env.env.state = np.array([theta, thetadot])
             self.state = self.env.env._get_obs()
 
         # set render
