@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import pyplot as plt
 
 import world_model
-import pendulum as pend
+import pendulum
 
 
 def min_max_norm(v: float,
@@ -101,7 +101,7 @@ def calc_simulation_rmse(predictions, targets):
 
 
 # TODO move to planning cases
-def eval_model_predictions(steps, model, model_name):
+def eval_model_predictions(steps, world_model, model_name):
     """Evalutes the model for a number of consecutive steps.
 
     Creates a random plan with length steps. Initiates the simulation
@@ -119,17 +119,17 @@ def eval_model_predictions(steps, model, model_name):
     :return: nothing
     """
     # create a new random plan
-    plan = get_random_plan(steps)
+    plan = pendulum.get_random_plan(steps)
 
     # let the simulation run on the plan to create
     # the expected states as well as the starting state
     # s_0
-    sim_states = pend.run_simulation_plan(plan=plan)
+    sim_states = pendulum.run_simulation_plan(plan=plan)
     # get starting state
     s_0 = sim_states[0]
     # let the model predict the states
     pred_states = world_model.predict_states(
-        model=model, state_0=s_0, plan=plan)
+        initial_state=s_0, plan=plan)
 
     # plot error functions (good for a single pass)
     plot_list = calc_simulation_rmse(pred_states, sim_states)

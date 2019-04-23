@@ -14,6 +14,7 @@ import copy
 import pendulum
 import world_model
 import plan_optimizer as po
+import matplotlib.pyplot as plt
 # import helper_functions as hf
 
 
@@ -25,27 +26,28 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     :return: the gradients in a pandas dataframe
     :rtype: pd.DataFrame
     """
+    # TODO return df
     # setup the scenario
     # do 70 iterations
     iterations = 200
-    # iterations = 3
+    #iterations = 3
+    # use plan length 10
     plan_length = 10
     starting_state = np.array([2, 4])
     env = pendulum.Pendulum(render=False, state=starting_state)
-    # use plan length 10
-    init_plan = pendulum.get_random_plan(plan_length)
+    init_plan = po.get_random_plan(plan_length)
     # iterate through these adaptation rates
     adaptation_rates = [10, 5, 1, 0.1]
-    # adaptation_rates = [1]
+    #adaptation_rates = [1]
     # save result arrays in here
     log_list = []
     for rate in adaptation_rates:
-        plan_optimizer = po.Optimizer(model,
-                                      rate,
-                                      iterations,
-                                      copy.deepcopy(init_plan),
-                                      hf.get_random_action
-                                      )
+        plan_optimizer = po.Planner(model,
+                                    rate,
+                                    iterations,
+                                    copy.deepcopy(init_plan),
+                                    po.get_random_action
+                                    )
         _, logs = plan_optimizer.plan_next_step(env.get_state())
         # extract gradient_log and append to full log list
         for iteration_log in logs:
@@ -87,6 +89,7 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     # swap running index with string names
     # result_df.rename(index=str, columns=str, inplace=True)
     result_df.columns = new_columns
+
     print("saving data")
     result_df.to_parquet("data/grad_logs.parquet", engine="pyarrow")
 
@@ -115,9 +118,10 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
     """
     columns = [
         "rollout", "step",
-        "sim_cos_theta", "sim_sin_theta", "sim_theta_dot",
-        "pre_cos_theta", "pre_sin_theta", "pre_theta_dot"
+        "source", "state_type",
+        "value"
     ]
+
     observations = []
     for r in range(rollouts):
         plan = pendulum.get_random_plan(steps)
@@ -130,13 +134,121 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
                                                 plan=plan
                                                 )
         step = 1
-        for truth, prediction in zip(true_states, predicted_states):
-            # unpack the values into an observation
-            observation = [r, step, *truth, *prediction]
+        for true_state, predicted_state in zip(true_states, predicted_states):
+            observations.append(_unpack_state(r,
+                                              step,
+                                              "simulation",
+                                              true_state
+                                              ))
+            observations.append(_unpack_state(r,
+                                              step,
+                                              "prediction",
+                                              predicted_state
+                                              ))
             step += 1
-            observations.append(observation)
+    observations = [obs for state in observations for obs in state]
     observations_df = pd.DataFrame(data=observations,
                                    columns=columns,
                                    copy=True
                                    )
     return observations_df
+
+
+def _unpack_state(rollout: int, step: int,
+                  source: str, state: list
+                  ) -> list:
+    state_type = ["cos", "sin", "dot"]
+    observations = []
+    for s_type, value in zip(state_type, state):
+        observation = [rollout, step, source, s_type, value]
+        observations.append(observation)
+
+    return observations
+
+
+def model_quality_analysis(test_runs: int,
+                           wmr: world_model.WorldModelWrapper,
+                           steps: int,
+                           visualize: bool = True,
+                           plot_title: str = ""
+                           ):
+    """Calculates the mean rmse over multiple random instances.
+
+    Calculates the mean of the rmse values for test_runs number of
+    runs with steps number of steps. The calculated mean is the mean
+    over all test runs. If visualize is true, the rmse values and
+    the mean will be plotted against each other in a single plot.
+
+    :param test_runs: # of random tries
+    :param wmr: the model wrapper to be tested
+    :param steps: # of steps in a single try
+    :param visualize: whether the result should be visualized
+    :param plot_title: the title of the plot
+    :return:
+    """
+    all_rmse_values = []
+    plot_list = []
+    for i in range(test_runs):
+        # create a new random plan
+        plan = pendulum.get_random_plan(steps)
+
+        # let the simulation run on the plan to create
+        # the expected states as well as
+        # the starting state s_0
+        sim_states = pendulum.run_simulation_plan(plan=plan)
+        # get starting state
+        s_0 = sim_states[0]
+        # let the model predict the states
+        pred_states = wmr.predict_states(initial_state=s_0, plan=plan)
+
+        current_rmse_values = []
+        # calculate the rmse
+        for pred_state, sim_state in zip(pred_states, sim_states):
+            current_rmse_values.append(
+                world_model.single_rmse_loss(pred_state,
+                                             sim_state
+                                             )
+            )
+        # append the values to the list of values as an numpy array
+        all_rmse_values.append(np.array(current_rmse_values))
+        plot_list.append({
+            "label": i+1,
+            "values": np.array(current_rmse_values),
+            "format": "-"
+        })
+
+    mean_array = np.mean(all_rmse_values, axis=0)
+    mean_dict = {
+        "label": "Mean",
+        "values": mean_array,
+        "format": ""
+    }
+
+    if visualize:
+        # TODO use seaborn
+        # initialize figure
+        plt.figure()
+        # plot title
+        plt.suptitle(plot_title)
+        # iterate through list and plot all entries
+        for plot_data in plot_list:
+            plt.plot(plot_data["values"],
+                     plot_data["format"],
+                     label=plot_data["label"],
+                     linewidth=1,
+                     alpha=0.5
+                     )
+        # plot the mean
+        mean_plot = plt.plot(mean_dict["values"],
+                             mean_dict["format"],
+                             label=mean_dict["label"],
+                             linewidth=2
+                             )
+
+        plt.ylim(0, 10)
+        plt.grid(b=True, alpha=0.25, linestyle="--")
+        plt.tick_params(axis="both", which="major", direction="out")
+        plt.legend(mean_plot, ["Mean"], loc=1)
+        plt.show()
+
+    return np.add.reduce(mean_array)
