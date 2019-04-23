@@ -121,7 +121,7 @@ class Planner:
         """
         logs = []
         for e in range(self.iterations):
-            print(f"Iteration {e + 1}")
+            #print(f"Iteration {e + 1}")
 
             # log the starting time for each iteration
             start_time = time.time()
@@ -173,7 +173,7 @@ class Planner:
 
             # Log time after the tape is done
             tape_time = time.time()
-            print(f"Tape Time: {tape_time - start_time}")
+            #print(f"Tape Time: {tape_time - start_time}")
 
             # iterate over all derivative pairs and
             # add the gradients to the the grads list
@@ -217,7 +217,7 @@ class Planner:
 
             # Log the time when gradients were calculated
             grad_time = time.time()
-            print(f"Grad Time: {grad_time - tape_time}")
+            #print(f"Grad Time: {grad_time - tape_time}")
 
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
@@ -226,8 +226,8 @@ class Planner:
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
-            print(f"Assign Time: {end_time - grad_time}")
-            print(f"Iteration {e + 1} Total Time: {end_time - start_time}\n")
+            #print(f"Assign Time: {end_time - grad_time}")
+            #print(f"Iteration {e + 1} Total Time: {end_time - start_time}\n")
 
             # append data to the log dict
             logs.append({

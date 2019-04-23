@@ -97,6 +97,7 @@ def single_rmse_loss(output: np.array, target: np.array) -> float:
     :rtype: float
     """
     # TODO Accept matrices
+    # TODO Use tf functions
     return np.sqrt(
         np.mean(
             np.square(
