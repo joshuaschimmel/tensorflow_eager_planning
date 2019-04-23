@@ -11,7 +11,7 @@ import pendulum
 import world_model
 import plan_optimizer
 import planning_cases
-#import helper_functions as hf
+# import helper_functions as hf
 
 
 tf.enable_eager_execution()
@@ -42,11 +42,24 @@ neuron_text = (str(_neurons) + '-') \
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
-wm = world_model.WorldModelWrapper()
-wm.load_model()
-#wm.build_keras_model(neurons=50, hidden_layers=5)
+env = pendulum.Pendulum()
 
-df = planning_cases.prediction_accuracy(wm, 1000, 200)
+wm = world_model.WorldModelWrapper()
+# wm.load_model()
+wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
+wm.train_model(env=env, max_iterations=5000, steps=20)
+
+# planning_cases.plan_convergence(wm.get_model())
+# planning_cases.model_quality_analysis(test_runs=50,
+#                                      wmr=wm,
+#                                      steps=50,
+#                                      visualize=True
+#                                      )
+
+df = planning_cases.prediction_accuracy(model=wm,
+                                        rollouts=200,
+                                        steps=25
+                                        )
 df.to_parquet("data/world_model_prediction.parquet", engine="pyarrow")
 
 # planning_cases.plan_convergence(model)
