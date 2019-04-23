@@ -134,6 +134,7 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
                                                 plan=plan
                                                 )
         step = 1
+        # create observations from the state lists (clean format for df)
         for true_state, predicted_state in zip(true_states, predicted_states):
             observations.append(_unpack_state(r,
                                               step,
@@ -146,6 +147,7 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
                                               predicted_state
                                               ))
             step += 1
+    # flatten the observations and create the df
     observations = [obs for state in observations for obs in state]
     observations_df = pd.DataFrame(data=observations,
                                    columns=columns,
@@ -157,9 +159,25 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
 def _unpack_state(rollout: int, step: int,
                   source: str, state: list
                   ) -> list:
+    """Unpacks the state into observations and returns the list.
+
+    :param rollout: rollout the state was generated in
+    :type rollout: int
+    :param step: the step this state was generated in
+    :type step: int
+    :param source: the source (either simulation or prediction) this state
+        was generated in
+    :type source: str
+    :param state: the state in qestion
+    :type state: list
+    :return: list of observations generated from this state
+    :rtype: list
+    """
+    # state consists of cos, sin, dot
     state_type = ["cos", "sin", "dot"]
     observations = []
     for s_type, value in zip(state_type, state):
+        # create observations
         observation = [rollout, step, source, s_type, value]
         observations.append(observation)
 
@@ -253,11 +271,12 @@ def angle_test(angles: list,
                speeds: list,
                wmr: world_model.WorldModelWrapper
                ) -> pd.DataFrame:
-    """Tests the planning algorithm for different angles and speeds.
+    """Initializes with speeds and angles, returns true theta and dot values.
 
     This case tests the planning algorithm for a set of starting angles
-    and speeds. The agent then has to solve the task. The results will
-    be returned as a DataFrame.
+    and speeds. The agent then has to solve the task. Observations of 
+    true theta and thetadot values will be returned as observations in a
+    DataFrame.
 
     :param angles: List of starting angles in DEGREES
     :type angles: list
@@ -266,18 +285,21 @@ def angle_test(angles: list,
     :return: Results
     :rtype: pd.DataFrame
     """
+    #  hyperparameters
     _plan_length = 10
     _steps = 50
     _logs = []
     _columns = ["angle", "speed", "theta", "thetadot"]
+    # iterate over both lists
     for angle in angles:
         for speed in speeds:
             rad = np.radians(angle)
 
+            # initialize the environment with the given parameters
             env = pendulum.Pendulum(state=[rad, speed])
             plan = po.get_random_plan(_plan_length)
 
-            # get the optimizer
+            # initialize the plan optimizer
             plan_optimizer = po.Planner(world_model=wmr.get_model(),
                                         learning_rate=1,
                                         iterations=10,
@@ -285,30 +307,28 @@ def angle_test(angles: list,
                                         fill_function=po.get_random_action
                                         )
             current_state = env.get_state()
+            # create first entry
             _logs.append([angle, speed, *env.get_env_state()])
+            # run the rollout
             for _ in range(_steps):
                 next_action, _ = plan_optimizer.plan_next_step(current_state)
                 current_state = env(next_action)
+            # close the environment after the rollout
             env.close()
     return pd.DataFrame(data=_logs, columns=_columns)
 
 
-def eval_model_predictions(steps, world_model_wrapper):
-    """Evalutes the model for a number of consecutive steps.
+def eval_model_predictions(steps: int,
+                           world_model_wrapper: world_model.WorldModelWrapper
+                           ) -> pd.DataFrame:
+    """Calculates RMSE of predicted and actual states for steos amount.
 
-    Creates a random plan with length steps. Initiates the simulation
-    in a random starting state and lets it uses the plan as inputs
-    and uses the resulting state as the values to compare the
-    models predictions against.
-    Uses the randomly initialized state as starting state for the
-    model and inputs the action.
-    Then the RMSE will be calculated and plotted against the
-    actual and the predicted states.
-
-    :param steps: # of predictions to make
-    :param model: the model to make the predictions
-    :param model_name: the name of the model (for the plot)
-    :return: nothing
+    :param steps: Number of steps to predict
+    :type steps: int
+    :param world_model_wrapper: Wrapper class for the world model
+    :type world_model_wrapper: WorldModelWrapper
+    :return: pandas DataFrame with the observations RMSE as one of them
+    :rtype: pandas.DataFrame
     """
     # initilize array to save the observations in
     observations = []
@@ -319,21 +339,19 @@ def eval_model_predictions(steps, world_model_wrapper):
         "source", "state_type",
         "value"
     ]
-    # create a new random plan
+
     plan = pendulum.get_random_plan(steps)
 
-    # let the simulation run on the plan to create
-    # the expected states as well as the starting state
-    # s_0
+    # get the true states
     true_states = pendulum.run_simulation_plan(plan=plan)
-    # get starting state
+    # use first state as starting state for prediction
     s_0 = true_states[0]
-    # let the model predict the states
+    # predict states
     predicted_states = world_model_wrapper.predict_states(
-        initial_state=s_0, plan=plan)
+        initial_state=s_0, plan=plan
+    )
 
-    # TODO unpack states into observations for a step
-    # TODO calculate the rmse over all values and add it to the df
+    # flatten into observations and calculate RMSE for each step
     step = 1
     for true_state, predicted_state in zip(true_states, predicted_states):
         observations.append(_unpack_state(r,
