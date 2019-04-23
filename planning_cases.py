@@ -252,3 +252,46 @@ def model_quality_analysis(test_runs: int,
         plt.show()
 
     return np.add.reduce(mean_array)
+
+
+def angle_test(angles: list,
+               speeds: list,
+               wmr: world_model.WorldModelWrapper
+               ) -> pd.DataFrame:
+    """Tests the planning algorithm for different angles and speeds.
+
+    This case tests the planning algorithm for a set of starting angles
+    and speeds. The agent then has to solve the task. The results will
+    be returned as a DataFrame.
+
+    :param angles: List of starting angles in DEGREES
+    :type angles: list
+    :param speeds: List of speeds in [-8, 8]
+    :type speeds: list
+    :return: Results
+    :rtype: pd.DataFrame
+    """
+    _plan_length = 20
+    _steps = 200
+    _logs = []
+    _columns = ["angle", "speed", "theta", "thetadot"]
+    for angle in angles:
+        for speed in speeds:
+            rad = np.radians(angle)
+
+            env = pendulum.Pendulum(state=[rad, speed])
+            plan = po.get_random_plan(_plan_length)
+
+            # get the optimizer
+            plan_optimizer = po.Planner(world_model=wmr.get_model(),
+                                        learning_rate=1,
+                                        iterations=20,
+                                        initial_plan=plan,
+                                        fill_function=po.get_random_action
+                                        )
+            current_state = env.get_state()
+            _logs.append([angle, speed, *env.get_env_state()])
+            for _ in range(_steps):
+                next_action = plan_optimizer.plan_next_step(current_state)
+                current_state = env(next_action)
+    return pd.DataFrame(data=_logs, columns=_columns)
