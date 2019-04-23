@@ -43,11 +43,25 @@ model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
 env = pendulum.Pendulum()
+env.close()
 
 wm = world_model.WorldModelWrapper()
 wm.load_model()
+
 # wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
 # wm.train_model(env=env, max_iterations=5000, steps=20)
+
+speeds = [-8, 0, 8]
+angles = np.arange(-45, 46, 5)
+
+planning_cases.angle_test(angles, speeds, wm)
+
+
+def test_world_model(wmr: world_model.WorldModelWrapper):
+    # TODO implement pipeline to show the quality of the model
+    pass
+
+#planning_cases.eval_model_predictions(10, wm)
 
 # planning_cases.plan_convergence(wm.get_model())
 # planning_cases.model_quality_analysis(test_runs=50,

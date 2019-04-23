@@ -203,26 +203,21 @@ def model_quality_analysis(test_runs: int,
 
         current_rmse_values = []
         # calculate the rmse
+        step = 0
         for pred_state, sim_state in zip(pred_states, sim_states):
-            current_rmse_values.append(
+            current_rmse_values.append([
+                i,
+                step,
                 world_model.single_rmse_loss(pred_state,
                                              sim_state
                                              )
-            )
+            ])
+            step += 1
         # append the values to the list of values as an numpy array
         all_rmse_values.append(np.array(current_rmse_values))
-        plot_list.append({
-            "label": i+1,
-            "values": np.array(current_rmse_values),
-            "format": "-"
-        })
 
-    mean_array = np.mean(all_rmse_values, axis=0)
-    mean_dict = {
-        "label": "Mean",
-        "values": mean_array,
-        "format": ""
-    }
+    #mean_values = np.mean(all_rmse_values, axis=0)
+    # drop the index
 
     if visualize:
         # TODO use seaborn
@@ -251,7 +246,7 @@ def model_quality_analysis(test_runs: int,
         plt.legend(mean_plot, ["Mean"], loc=1)
         plt.show()
 
-    return np.add.reduce(mean_array)
+    return all_rmse_values
 
 
 def angle_test(angles: list,
@@ -271,8 +266,8 @@ def angle_test(angles: list,
     :return: Results
     :rtype: pd.DataFrame
     """
-    _plan_length = 20
-    _steps = 200
+    _plan_length = 10
+    _steps = 50
     _logs = []
     _columns = ["angle", "speed", "theta", "thetadot"]
     for angle in angles:
@@ -285,13 +280,88 @@ def angle_test(angles: list,
             # get the optimizer
             plan_optimizer = po.Planner(world_model=wmr.get_model(),
                                         learning_rate=1,
-                                        iterations=20,
+                                        iterations=10,
                                         initial_plan=plan,
                                         fill_function=po.get_random_action
                                         )
             current_state = env.get_state()
             _logs.append([angle, speed, *env.get_env_state()])
             for _ in range(_steps):
-                next_action = plan_optimizer.plan_next_step(current_state)
+                next_action, _ = plan_optimizer.plan_next_step(current_state)
                 current_state = env(next_action)
+            env.close()
     return pd.DataFrame(data=_logs, columns=_columns)
+
+
+def eval_model_predictions(steps, world_model_wrapper):
+    """Evalutes the model for a number of consecutive steps.
+
+    Creates a random plan with length steps. Initiates the simulation
+    in a random starting state and lets it uses the plan as inputs
+    and uses the resulting state as the values to compare the
+    models predictions against.
+    Uses the randomly initialized state as starting state for the
+    model and inputs the action.
+    Then the RMSE will be calculated and plotted against the
+    actual and the predicted states.
+
+    :param steps: # of predictions to make
+    :param model: the model to make the predictions
+    :param model_name: the name of the model (for the plot)
+    :return: nothing
+    """
+    # initilize array to save the observations in
+    observations = []
+    # only a single rollout in this case
+    r = 0
+    columns = [
+        "rollout", "step",
+        "source", "state_type",
+        "value"
+    ]
+    # create a new random plan
+    plan = pendulum.get_random_plan(steps)
+
+    # let the simulation run on the plan to create
+    # the expected states as well as the starting state
+    # s_0
+    true_states = pendulum.run_simulation_plan(plan=plan)
+    # get starting state
+    s_0 = true_states[0]
+    # let the model predict the states
+    predicted_states = world_model_wrapper.predict_states(
+        initial_state=s_0, plan=plan)
+
+    # TODO unpack states into observations for a step
+    # TODO calculate the rmse over all values and add it to the df
+    step = 1
+    for true_state, predicted_state in zip(true_states, predicted_states):
+        observations.append(_unpack_state(r,
+                                          step,
+                                          "simulation",
+                                          true_state
+                                          ))
+        observations.append(_unpack_state(r,
+                                          step,
+                                          "prediction",
+                                          predicted_state
+                                          ))
+        # add the rmse for each step
+        observations.append([[r,
+                              step,
+                              "RMSE",
+                              "RMSE",
+                              world_model.single_rmse_loss(predicted_state,
+                                                           true_state
+                                                           )
+                              ]])
+        step += 1
+    # flatten observations
+    observations = [obs for state in observations for obs in state]
+
+    # create the dataframe
+    observations_df = pd.DataFrame(data=observations,
+                                   columns=columns,
+                                   copy=True
+                                   )
+    return observations_df
