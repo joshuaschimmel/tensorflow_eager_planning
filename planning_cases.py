@@ -15,6 +15,7 @@ import pendulum
 import world_model
 import plan_optimizer as po
 import matplotlib.pyplot as plt
+import seaborn as sns
 # import helper_functions as hf
 
 
@@ -30,7 +31,7 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     # setup the scenario
     # do 70 iterations
     iterations = 200
-    #iterations = 3
+    # iterations = 3
     # use plan length 10
     plan_length = 10
     starting_state = np.array([2, 4])
@@ -38,7 +39,7 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     init_plan = po.get_random_plan(plan_length)
     # iterate through these adaptation rates
     adaptation_rates = [10, 5, 1, 0.1]
-    #adaptation_rates = [1]
+    # adaptation_rates = [1]
     # save result arrays in here
     log_list = []
     for rate in adaptation_rates:
@@ -189,7 +190,7 @@ def model_quality_analysis(test_runs: int,
                            steps: int,
                            visualize: bool = True,
                            plot_title: str = ""
-                           ):
+                           ) -> pd.DataFrame:
     """Calculates the mean rmse over multiple random instances.
 
     Calculates the mean of the rmse values for test_runs number of
@@ -234,37 +235,70 @@ def model_quality_analysis(test_runs: int,
         # append the values to the list of values as an numpy array
         all_rmse_values.append(np.array(current_rmse_values))
 
-    #mean_values = np.mean(all_rmse_values, axis=0)
-    # drop the index
+    # flatten and create dataframe
+    data = [datum for sublist in all_rmse_values for datum in sublist]
+
+    df = pd.DataFrame(data, columns=["rollout", "step", "rmse"])
+
+    # calculate the mean rmse with a second dataframe
+    df_mean = df.groupby("step").mean()
+    df_mean = df_mean.drop(columns="rollout")
+
+    df_mean.reset_index(inplace=True)
+
+    # since the mean is not part of a rollout, we use this categorical
+    # column to label it
+    df_mean["rollout"] = "mean"
+
+    # append the mean df to the main df
+    df_all = pd.concat([df, df_mean], sort=False)
 
     if visualize:
-        # TODO use seaborn
-        # initialize figure
-        plt.figure()
-        # plot title
-        plt.suptitle(plot_title)
-        # iterate through list and plot all entries
-        for plot_data in plot_list:
-            plt.plot(plot_data["values"],
-                     plot_data["format"],
-                     label=plot_data["label"],
-                     linewidth=1,
-                     alpha=0.5
-                     )
-        # plot the mean
-        mean_plot = plt.plot(mean_dict["values"],
-                             mean_dict["format"],
-                             label=mean_dict["label"],
-                             linewidth=2
-                             )
+        sns.set(style="ticks")
+        # function for general overview
+        sns.relplot(x="step",
+                    y="rmse",
+                    kind="line",
+                    # units="rollout",
+                    # hue="rollout",
+                    ci="sd",
+                    # estimator=None,
+                    alpha=1,
+                    height=5,
+                    aspect=6/2,
+                    data=df
+                    )
+    palette = sns.cubehelix_palette(
+        n_colors=len(df["rollout"].unique()),
+        start=1,
+        rot=-.8,
+        hue=1,
+        dark=0.4,
+        light=0.75
+    )
 
-        plt.ylim(0, 10)
-        plt.grid(b=True, alpha=0.25, linestyle="--")
-        plt.tick_params(axis="both", which="major", direction="out")
-        plt.legend(mean_plot, ["Mean"], loc=1)
-        plt.show()
+    # facetplot for all rollouts against the mean
+    g = sns.relplot(x="step",
+                    y="rmse",
+                    hue="rollout",
+                    palette=palette,
+                    alpha=0.5,
+                    height=5,
+                    aspect=6/2,
+                    kind="line",
+                    legend=False,
+                    data=df
+                    )
+    sns.lineplot(x="step",
+                 y="rmse",
+                 linewidth=4,
+                 color="cyan",
+                 data=df_mean,
+                 ax=g.ax
+                 )
+    plt.show()
 
-    return all_rmse_values
+    return df_all
 
 
 def angle_test(angles: list,
