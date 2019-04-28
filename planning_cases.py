@@ -430,3 +430,15 @@ def angle_test(wmr: world_model.WorldModelWrapper,
             # close the environment after the rollout
             env.close()
     return pd.DataFrame(data=_logs, columns=_columns)
+
+
+def environment_performance():
+    # cumulative reward for an episode
+    # TODO implement
+    pass
+
+
+def best_environment_performance():
+    # best '100-episode' performance
+    # TODO implement
+    pass
