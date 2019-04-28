@@ -19,7 +19,12 @@ import seaborn as sns
 # import helper_functions as hf
 
 
-def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
+def plan_convergence(wmr: world_model.WorldModelWrapper,
+                     rollouts: int,
+                     steps: int,
+                     adaptation_rates: list,
+                     visualize: bool = False,
+                     ) -> pd.DataFrame:
     """This function tests convergence for different adapation rates.
 
     :param optimizer: a model for the plan optimizer
@@ -27,7 +32,9 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     :return: the gradients in a pandas dataframe
     :rtype: pd.DataFrame
     """
-    # TODO return df
+    # TODO visualization
+    # TODO expect a world model wrapper and not a direct model
+    # TODO expect rollouts, steps and adaptation rates as input
     # setup the scenario
     # do 70 iterations
     iterations = 200
@@ -77,49 +84,78 @@ def plan_convergence(model: tf.keras.models.Model) -> pd.DataFrame:
     """
 
     # titles for the columns
-    new_columns = ["adaptation_rate",
-                   "iteration",
-                   "loss",
-                   "loss_nr",
-                   "grad",
-                   "action_nr",
-                   ]
-    # turn the result into a pandas dataframe for easy visualization
-    # and storage
-    result_df = pd.DataFrame(log_list)
-    # swap running index with string names
-    # result_df.rename(index=str, columns=str, inplace=True)
-    result_df.columns = new_columns
+    column_names = ["adaptation_rate",
+                    "iteration",
+                    "loss",
+                    "loss_nr",
+                    "grad",
+                    "action_nr",
+                    ]
+    # turn the result into dataframe
+    result_df = pd.DataFrame(log_list, columns=column_names)
 
-    print("saving data")
-    result_df.to_parquet("data/grad_logs.parquet", engine="pyarrow")
+    return result_df
+
+
+def _unpack_state(rollout: int, step: int,
+                  source: str, state: list
+                  ) -> list:
+    """Unpacks the state into observations and returns the list.
+
+    :param rollout: rollout the state was generated in
+    :type rollout: int
+    :param step: the step this state was generated in
+    :type step: int
+    :param source: the source (either simulation or prediction) this state
+        was generated in
+    :type source: str
+    :param state: the state in qestion
+    :type state: list
+    :return: list of observations generated from this state
+    :rtype: list
+    """
+    # TODO make this an atomic function for a single feature set
+    # state consists of cos, sin, dot
+    state_type = ["cos", "sin", "dot"]
+    observations = []
+    for s_type, value in zip(state_type, state):
+        # create observations
+        observation = [rollout, step, source, s_type, value]
+        observations.append(observation)
+
+    return observations
 
 
 def prediction_accuracy(model: world_model.WorldModelWrapper,
                         rollouts: int,
-                        steps: int
+                        steps: int,
+                        visualize: bool = False,
                         ) -> pd.DataFrame:
-    """Predicts the truth and saves both in a DataFrame.
+    """Creates df with prediction and truth for a model.
 
-    Runs multiple rollouts for mutiple consecutive steps
-    to create a pandas DataFrame for each step with both
-    the prediction and the truth. The states are
-    [cos_theta, sin_theta, theta_dot] and are prepended
-    with "sim_" for the truth and "pre_" for prediction
-    values.
+    This case runs the model against the simulation and
+    saves each predicted feature and target value in a
+    dataframe.
+    This can be done for a number of random
+    rollouts and consecutive steps per rollout.
+    The dataframe is in long-form, with the 
+    feature type, the value type (prediction or truth)
+    and the value itself as their respective columns.
 
-    :param model: A World Model wrapper
+
+    :param model: Wrapper for the world model
     :type model: world_model.WorldModelWrapper
-    :param rollouts: Number of random initializations
+    :param rollouts: number of random initialisations
     :type rollouts: int
-    :param steps: Number of consecutive steps
+    :param steps: consecutive steps
     :type steps: int
-    :return: DataFrame with the states
+    :return: dataframe with the values
     :rtype: pd.DataFrame
     """
-    columns = [
+    # TODO if visualize=True -> visualize)
+    column_names = [
         "rollout", "step",
-        "source", "state_type",
+        "value_type", "feature_type",
         "value"
     ]
 
@@ -151,63 +187,105 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
     # flatten the observations and create the df
     observations = [obs for state in observations for obs in state]
     observations_df = pd.DataFrame(data=observations,
+                                   columns=column_names,
+                                   copy=True
+                                   )
+    return observations_df
+
+
+def eval_model_predictions(world_model_wrapper: world_model.WorldModelWrapper,
+                           steps: int,
+                           visualize: bool = False,
+                           ) -> pd.DataFrame:
+    """Calculates RMSE of predicted and actual states for steps amount.
+
+    :param steps: Number of steps to predict
+    :type steps: int
+    :param world_model_wrapper: Wrapper class for the world model
+    :type world_model_wrapper: WorldModelWrapper
+    :return: pandas DataFrame with the observations RMSE as one of them
+    :rtype: pandas.DataFrame
+    """
+    # TODO use prediction accuracy function with one rollout
+    # TODO visualize
+    # TODO rename
+    # initilize array to save the observations in
+    observations = []
+    # only a single rollout in this case
+    r = 0
+    columns = [
+        "rollout", "step",
+        "source", "state_type",
+        "value"
+    ]
+
+    plan = pendulum.get_random_plan(steps)
+
+    # get the true states
+    true_states = pendulum.run_simulation_plan(plan=plan)
+    # use first state as starting state for prediction
+    s_0 = true_states[0]
+    # predict states
+    predicted_states = world_model_wrapper.predict_states(
+        initial_state=s_0,
+        plan=plan
+    )
+
+    # flatten into observations and calculate RMSE for each step
+    step = 1
+    for true_state, predicted_state in zip(true_states, predicted_states):
+        observations.append(_unpack_state(r,
+                                          step,
+                                          "simulation",
+                                          true_state
+                                          ))
+        observations.append(_unpack_state(r,
+                                          step,
+                                          "prediction",
+                                          predicted_state
+                                          ))
+        # add the rmse for each step
+        observations.append([[r,
+                              step,
+                              "RMSE",
+                              "RMSE",
+                              world_model.single_rmse_loss(predicted_state,
+                                                           true_state
+                                                           )
+                              ]])
+        step += 1
+    # flatten observations
+    observations = [obs for state in observations for obs in state]
+
+    # create the dataframe
+    observations_df = pd.DataFrame(data=observations,
                                    columns=columns,
                                    copy=True
                                    )
     return observations_df
 
 
-def _unpack_state(rollout: int, step: int,
-                  source: str, state: list
-                  ) -> list:
-    """Unpacks the state into observations and returns the list.
-
-    :param rollout: rollout the state was generated in
-    :type rollout: int
-    :param step: the step this state was generated in
-    :type step: int
-    :param source: the source (either simulation or prediction) this state
-        was generated in
-    :type source: str
-    :param state: the state in qestion
-    :type state: list
-    :return: list of observations generated from this state
-    :rtype: list
-    """
-    # state consists of cos, sin, dot
-    state_type = ["cos", "sin", "dot"]
-    observations = []
-    for s_type, value in zip(state_type, state):
-        # create observations
-        observation = [rollout, step, source, s_type, value]
-        observations.append(observation)
-
-    return observations
-
-
-def model_quality_analysis(test_runs: int,
-                           wmr: world_model.WorldModelWrapper,
+def model_quality_analysis(wmr: world_model.WorldModelWrapper,
+                           rollouts: int,
                            steps: int,
-                           visualize: bool = True,
-                           plot_title: str = ""
+                           visualize: bool = False,
                            ) -> pd.DataFrame:
     """Calculates the mean rmse over multiple random instances.
 
-    Calculates the mean of the rmse values for test_runs number of
+    Calculates the mean of the rmse values for rollouts number of
     runs with steps number of steps. The calculated mean is the mean
-    over all test runs. If visualize is true, the rmse values and
-    the mean will be plotted against each other in a single plot.
+    over all test runs. If visualize is true, the mean will be
+    plotted with standard deviation error bars and against lines
+    for all all values
 
-    :param test_runs: # of random tries
+    :param rollouts: # of random tries
     :param wmr: the model wrapper to be tested
     :param steps: # of steps in a single try
     :param visualize: whether the result should be visualized
-    :param plot_title: the title of the plot
-    :return:
+    :return: pd.DataFrame
     """
     all_rmse_values = []
-    plot_list = []
-    for i in range(test_runs):
+    for i in range(rollouts):
         # create a new random plan
         plan = pendulum.get_random_plan(steps)
 
@@ -301,9 +379,10 @@ def model_quality_analysis(test_runs: int,
     return df_all
 
 
-def angle_test(angles: list,
+def angle_test(wmr: world_model.WorldModelWrapper,
+               angles: list,
                speeds: list,
-               wmr: world_model.WorldModelWrapper
+               visualize: bool = False,
                ) -> pd.DataFrame:
     """Initializes with speeds and angles, returns true theta and dot values.
 
@@ -319,6 +398,7 @@ def angle_test(angles: list,
     :return: Results
     :rtype: pd.DataFrame
     """
+    # TODO test
     #  hyperparameters
     _plan_length = 10
     _steps = 50
@@ -350,70 +430,3 @@ def angle_test(angles: list,
             # close the environment after the rollout
             env.close()
     return pd.DataFrame(data=_logs, columns=_columns)
-
-
-def eval_model_predictions(steps: int,
-                           world_model_wrapper: world_model.WorldModelWrapper
-                           ) -> pd.DataFrame:
-    """Calculates RMSE of predicted and actual states for steos amount.
-
-    :param steps: Number of steps to predict
-    :type steps: int
-    :param world_model_wrapper: Wrapper class for the world model
-    :type world_model_wrapper: WorldModelWrapper
-    :return: pandas DataFrame with the observations RMSE as one of them
-    :rtype: pandas.DataFrame
-    """
-    # initilize array to save the observations in
-    observations = []
-    # only a single rollout in this case
-    r = 0
-    columns = [
-        "rollout", "step",
-        "source", "state_type",
-        "value"
-    ]
-
-    plan = pendulum.get_random_plan(steps)
-
-    # get the true states
-    true_states = pendulum.run_simulation_plan(plan=plan)
-    # use first state as starting state for prediction
-    s_0 = true_states[0]
-    # predict states
-    predicted_states = world_model_wrapper.predict_states(
-        initial_state=s_0, plan=plan
-    )
-
-    # flatten into observations and calculate RMSE for each step
-    step = 1
-    for true_state, predicted_state in zip(true_states, predicted_states):
-        observations.append(_unpack_state(r,
-                                          step,
-                                          "simulation",
-                                          true_state
-                                          ))
-        observations.append(_unpack_state(r,
-                                          step,
-                                          "prediction",
-                                          predicted_state
-                                          ))
-        # add the rmse for each step
-        observations.append([[r,
-                              step,
-                              "RMSE",
-                              "RMSE",
-                              world_model.single_rmse_loss(predicted_state,
-                                                           true_state
-                                                           )
-                              ]])
-        step += 1
-    # flatten observations
-    observations = [obs for state in observations for obs in state]
-
-    # create the dataframe
-    observations_df = pd.DataFrame(data=observations,
-                                   columns=columns,
-                                   copy=True
-                                   )
-    return observations_df
