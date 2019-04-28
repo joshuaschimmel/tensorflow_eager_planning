@@ -42,8 +42,6 @@ neuron_text = (str(_neurons) + '-') \
 model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
-env = pendulum.Pendulum()
-env.close()
 
 wm = world_model.WorldModelWrapper()
 wm.load_model()
@@ -59,7 +57,34 @@ planning_cases.angle_test(angles, speeds, wm)
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
     # TODO implement pipeline to show the quality of the model
-    pass
+    _rollouts = 200
+    _steps = 100
+    # eval behaviour of RMSE for a single rollout
+    planning_cases.eval_model_predictions(steps=_steps,
+                                          world_model_wrapper=wmr,
+                                          visualize=True
+                                          )
+    # see RMSE for multiple rollouts
+    planning_cases.model_quality_analysis(wmr=wmr,
+                                          rollouts=_rollouts,
+                                          steps=_steps,
+                                          visualize=True
+                                          )
+    # see whether the plan converges
+    planning_cases.plan_convergence(wmr=wmr,
+                                    rollouts=_rollouts,
+                                    steps=_steps,
+                                    adaptation_rates=[0.1, 0.5, 1, 2]
+                                    )
+    # check whether the agent can hold up the pendulum
+    angles = [-30, 0, 30]  # TODO TBD angles
+    speeds = [-4, 0, 4]  # TODO TBD speeds
+    planning_cases.angle_test(wmr=wmr,
+                              angles=angles,
+                              speeds=speeds,
+                              visualize=True
+                              )
+
 
 #planning_cases.eval_model_predictions(10, wm)
 
