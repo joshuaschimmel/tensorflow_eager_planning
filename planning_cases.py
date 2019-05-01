@@ -20,42 +20,53 @@ import seaborn as sns
 
 
 def plan_convergence(wmr: world_model.WorldModelWrapper,
-                     rollouts: int,
-                     steps: int,
-                     adaptation_rates: list,
+                     plan_iterations: int,
+                     plan_length: int,
+                     adaptation_rates: list = [10, 5, 1, 0.1],
+                     starting_state: np.array = np.array([2, 4]),
                      visualize: bool = False,
                      ) -> pd.DataFrame:
     """This function tests convergence for different adapation rates.
 
-    :param optimizer: a model for the plan optimizer
-    :type optimizer: tf.keras.models.Model
-    :return: the gradients in a pandas dataframe
+    :param wmr: wrapper for the world model
+    :type wmr: world_model.WorldModelWrapper
+    :param plan_iterations: number of times the planner should iterate
+        over the plan
+    :type plan_iterations: int
+    :param plan_length: length of the plan, how far the agent sees into
+        the future
+    :type plan_length: int
+    :param adaptation_rates: default adaptation rates to test,
+        defaults to [10, 5, 1, 0.1]
+    :type adaptation_rates: list, optional
+    :param starting_state: optional starting state,
+        defaults to np.array([2, 4])
+    :type starting_state: np.array, optional
+    :param visualize: whether this function should visualize its results,
+        defaults to False
+    :type visualize: bool, optional
+    :return: dataframe with the results
     :rtype: pd.DataFrame
     """
-    # TODO visualization
-    # TODO expect a world model wrapper and not a direct model
-    # TODO expect rollouts, steps and adaptation rates as input
     # setup the scenario
-    # do 70 iterations
-    iterations = 200
-    # iterations = 3
-    # use plan length 10
-    plan_length = 10
-    starting_state = np.array([2, 4])
     env = pendulum.Pendulum(render=False, state=starting_state)
+
     init_plan = po.get_random_plan(plan_length)
-    # iterate through these adaptation rates
-    adaptation_rates = [10, 5, 1, 0.1]
-    # adaptation_rates = [1]
-    # save result arrays in here
+
+    # save result
     log_list = []
+    # iterate through these adaptation rates
     for rate in adaptation_rates:
-        plan_optimizer = po.Planner(model,
-                                    rate,
-                                    iterations,
-                                    copy.deepcopy(init_plan),
-                                    po.get_random_action
+        print(f"current adaptation_rate: {rate}")
+        # create planning object
+        plan_optimizer = po.Planner(world_model=wmr.get_model(),
+                                    learning_rate=rate,
+                                    iterations=plan_iterations,
+                                    initial_plan=copy.deepcopy(init_plan),
+                                    fill_function=po.get_random_action,
+                                    return_logs=True
                                     )
+        # save the logs created while planning
         _, logs = plan_optimizer.plan_next_step(env.get_state())
         # extract gradient_log and append to full log list
         for iteration_log in logs:
@@ -65,23 +76,6 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
     log_list = [log for adaptation_r in log_list
                 for log in adaptation_r
                 ]
-
-    # log structure
-    """np.array([
-        # objects adaptation rate
-        self.adaptation_rate,
-        # epsilon, current iteration
-        e,
-        # loss for this action
-        loss,
-        # the position of the loss
-        loss_pos,
-        # the gradient
-        grad,
-        # the position of the action
-        taken_action_i,
-    ])
-    """
 
     # titles for the columns
     column_names = ["adaptation_rate",
@@ -93,6 +87,61 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
                     ]
     # turn the result into dataframe
     result_df = pd.DataFrame(log_list, columns=column_names)
+
+    # create visualization if setting is on
+    if visualize:
+        df = result_df.copy(deep=True)
+        # calc df with absolut grads
+        df_abs = df.copy(deep=True)
+        df_abs["grad"] = df_abs["grad"].apply(lambda x: np.absolute(x))
+        df_abs["grad"].describe()
+
+        # adaptation rate - convergence plot for a0
+        # overview
+        df_a0 = df[df["action_nr"] == 0]
+        df_a0_abs = df_abs[df_abs["action_nr"] == 0]
+        sns.relplot(x="iteration",
+                    y="grad",
+                    # hue="loss_nr",
+                    palette=sns.color_palette(
+                        palette="Blues", n_colors=10, desat=0.8),
+                    linewidth=1,
+                    row="adaptation_rate",
+                    col="loss_nr",
+                    kind="line", data=df_a0_abs)
+
+        # adaptation rate - convergence plot for a0
+        # all grad causes in one plot
+        sns.relplot(x="iteration",
+                    y="grad",
+                    hue="loss_nr",
+                    palette=sns.color_palette(
+                        palette="Blues", n_colors=10, desat=0.8),
+                    linewidth=1,
+                    height=7,
+                    aspect=2.5,
+                    row="adaptation_rate",
+                    kind="line",
+                    data=df_a0)
+
+        # adaption rate - convergence plot for a0 again, but with catplot
+        sns.catplot(x="loss_nr",
+                    y="grad",
+                    row="adaptation_rate",
+                    col="action_nr",
+                    height=4,
+                    # ratio=1,
+                    data=df
+                    )
+
+        # plot influence on action 0 by loss
+        sns.catplot(x="loss_nr",
+                    y="grad",
+                    row="adaptation_rate",
+                    kind="box",
+                    data=df_a0
+                    )
+        plt.show()
 
     return result_df
 
@@ -193,10 +242,10 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
     return observations_df
 
 
-def eval_model_predictions(world_model_wrapper: world_model.WorldModelWrapper,
-                           steps: int,
-                           visualize: bool = False,
-                           ) -> pd.DataFrame:
+def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
+                         steps: int,
+                         visualize: bool = False,
+                         ) -> pd.DataFrame:
     """Calculates RMSE of predicted and actual states for steps amount.
 
     :param steps: Number of steps to predict
@@ -206,13 +255,8 @@ def eval_model_predictions(world_model_wrapper: world_model.WorldModelWrapper,
     :return: pandas DataFrame with the observations RMSE as one of them
     :rtype: pandas.DataFrame
     """
-    # TODO use prediction accuracy function with one rollout
-    # TODO visualize
-    # TODO rename
     # initilize array to save the observations in
     observations = []
-    # only a single rollout in this case
-    r = 0
     columns = [
         "rollout", "step",
         "source", "state_type",
@@ -234,18 +278,18 @@ def eval_model_predictions(world_model_wrapper: world_model.WorldModelWrapper,
     # flatten into observations and calculate RMSE for each step
     step = 1
     for true_state, predicted_state in zip(true_states, predicted_states):
-        observations.append(_unpack_state(r,
+        observations.append(_unpack_state(0,
                                           step,
                                           "simulation",
                                           true_state
                                           ))
-        observations.append(_unpack_state(r,
+        observations.append(_unpack_state(0,
                                           step,
                                           "prediction",
                                           predicted_state
                                           ))
         # add the rmse for each step
-        observations.append([[r,
+        observations.append([[0,
                               step,
                               "RMSE",
                               "RMSE",
@@ -262,6 +306,34 @@ def eval_model_predictions(world_model_wrapper: world_model.WorldModelWrapper,
                                    columns=columns,
                                    copy=True
                                    )
+    if visualize:
+        states = observations_df[
+            observations_df["source"].str.contains("RMSE") == False
+        ]
+        errors = observations_df[
+            observations_df["source"].str.contains("RMSE")
+        ]
+        sns.set(style="ticks")
+        # confidence interval for all states
+        g = sns.relplot(x="step",
+                        y="value",
+                        hue="state_type",
+                        style="source",
+                        height=3,
+                        aspect=6/2,
+                        kind="line",
+                        data=states
+                        )
+
+        sns.lineplot(x="step",
+                     y="value",
+                     linewidth=3,
+                     color="cyan",
+                     legend=False,
+                     data=errors,
+                     ax=g.ax)
+        plt.show()
+
     return observations_df
 
 
@@ -346,35 +418,35 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
                     aspect=6/2,
                     data=df
                     )
-    palette = sns.cubehelix_palette(
-        n_colors=len(df["rollout"].unique()),
-        start=1,
-        rot=-.8,
-        hue=1,
-        dark=0.4,
-        light=0.75
-    )
+        palette = sns.cubehelix_palette(
+            n_colors=len(df["rollout"].unique()),
+            start=1,
+            rot=-.8,
+            hue=1,
+            dark=0.4,
+            light=0.75
+        )
 
-    # facetplot for all rollouts against the mean
-    g = sns.relplot(x="step",
-                    y="rmse",
-                    hue="rollout",
-                    palette=palette,
-                    alpha=0.5,
-                    height=5,
-                    aspect=6/2,
-                    kind="line",
-                    legend=False,
-                    data=df
-                    )
-    sns.lineplot(x="step",
-                 y="rmse",
-                 linewidth=4,
-                 color="cyan",
-                 data=df_mean,
-                 ax=g.ax
-                 )
-    plt.show()
+        # facetplot for all rollouts against the mean
+        g = sns.relplot(x="step",
+                        y="rmse",
+                        hue="rollout",
+                        palette=palette,
+                        alpha=0.5,
+                        height=5,
+                        aspect=6/2,
+                        kind="line",
+                        legend=False,
+                        data=df
+                        )
+        sns.lineplot(x="step",
+                     y="rmse",
+                     linewidth=4,
+                     color="cyan",
+                     data=df_mean,
+                     ax=g.ax
+                     )
+        plt.show()
 
     return df_all
 
