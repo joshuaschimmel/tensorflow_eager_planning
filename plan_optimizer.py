@@ -12,6 +12,7 @@ class Planner:
                  iterations: int,
                  initial_plan: list,
                  fill_function,
+                 return_logs: bool = False
                  ):
         """Initializes the Planner object.
 
@@ -22,6 +23,8 @@ class Planner:
         :param initial_plan: the initial plan
         :param fill_function: a function used to fill the plan with
             new actions
+        :param return_logs: whether this planner create and return logs
+            while planning. If False, will return None (default False)
         """
         self.model = world_model
         self.plan = initial_plan
@@ -30,6 +33,7 @@ class Planner:
         self.new_action = fill_function
         self.current_state = None
         self.current_action = None
+        self.return_logs = return_logs
 
     def plan_next_step(self, next_state: list) -> (float, list):
         """Update the state and returns the next action.
@@ -119,7 +123,7 @@ class Planner:
              gradients: np.array
             }]
         """
-        logs = []
+        logs = [] if self.return_logs else None
         for e in range(self.iterations):
             #print(f"Iteration {e + 1}")
 
@@ -162,6 +166,7 @@ class Planner:
                     # update the list of already taken actions
                     taken_actions.append(action)
                     # flatten the state and calculate the loss
+                    # TODO add action taken to reinforcement
                     loss_value = reinforcement(tf.squeeze(prediction_state))
                     # add the loss value together with the actions that
                     # led up to it and add them
@@ -195,22 +200,24 @@ class Planner:
                         # initialize a new one
                         grads.append(grad)
 
-                    # add the log for each action to the whole log list
-                    # as a numpy array
-                    optimization_log.append(np.array([
-                        # objects adaptation rate
-                        self.adaptation_rate,
-                        # epsilon, current iteration
-                        e,
-                        # loss for this action
-                        loss,
-                        # the position of the loss
-                        loss_pos,
-                        # the gradient
-                        grad,
-                        # the position of the action
-                        taken_action_i,
-                    ]))
+                    # if logging is on, add data to log
+                    if self.return_logs:
+                        # add the log for each action to the whole log list
+                        # as a numpy array
+                        optimization_log.append(np.array([
+                            # objects adaptation rate
+                            self.adaptation_rate,
+                            # epsilon, current iteration
+                            e,
+                            # loss for this action
+                            loss,
+                            # the position of the loss
+                            loss_pos,
+                            # the gradient
+                            grad,
+                            # the position of the action
+                            taken_action_i,
+                        ]))
 
                     # update counter
                     taken_action_i += 1
@@ -229,17 +236,19 @@ class Planner:
             #print(f"Assign Time: {end_time - grad_time}")
             #print(f"Iteration {e + 1} Total Time: {end_time - start_time}\n")
 
-            # append data to the log dict
-            logs.append({
-                "times": {
-                    "start": start_time,
-                    "tape": tape_time,
-                    "grad": grad_time,
-                    "end": end_time
-                },
-                "gradient_log": np.array(optimization_log)
-            })
-        # return the logs
+            # if logging is on, append times and gradients to the log list
+            if self.return_logs:
+                # TODO return a DataFrame
+                logs.append({
+                    "times": {
+                        "start": start_time,
+                        "tape": tape_time,
+                        "grad": grad_time,
+                        "end": end_time
+                    },
+                    "gradient_log": np.array(optimization_log)
+                })
+        # return the logs or None, if logging is off
         return logs
 
 
@@ -254,6 +263,7 @@ def reinforcement(state: tf.Tensor):
     :param state: A Tensor of shape (3,)
     :return: a scalar reinforcement value
     """
+    # TODO add last action taken to reinforcement
     return -(tf.square(tf.subtract(state[0], 1))
              + tf.square(state[1])
              + 0.01 * tf.square(state[2]))
