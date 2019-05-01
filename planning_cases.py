@@ -398,15 +398,21 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     :return: Results
     :rtype: pd.DataFrame
     """
-    # TODO test
-    #  hyperparameters
+    # hyperparameters
     _plan_length = 10
     _steps = 50
     _logs = []
-    _columns = ["angle", "speed", "theta", "thetadot"]
+    _columns = [
+        "init_angle",
+        "init_speed",
+        "step",
+        "theta",
+        "theta_dot"
+    ]
     # iterate over both lists
     for angle in angles:
         for speed in speeds:
+            print(f"current angle and speed: {angle}, {speed}")
             rad = np.radians(angle)
 
             # initialize the environment with the given parameters
@@ -422,14 +428,38 @@ def angle_test(wmr: world_model.WorldModelWrapper,
                                         )
             current_state = env.get_state()
             # create first entry
-            _logs.append([angle, speed, *env.get_env_state()])
+            _logs.append([angle, speed, 0, *env.get_env_state()])
             # run the rollout
-            for _ in range(_steps):
+            for step in range(_steps):
+                print(f"current step: {step}")
                 next_action, _ = plan_optimizer.plan_next_step(current_state)
                 current_state = env(next_action)
+                _logs.append([angle, speed, step + 1, *env.get_env_state()])
             # close the environment after the rollout
             env.close()
-    return pd.DataFrame(data=_logs, columns=_columns)
+    results = pd.DataFrame(data=_logs, columns=_columns)
+
+    if visualize:
+        df = results.copy(deep=True)
+
+        # zip speed and angle together to create an init option identifier
+        df["init_id"] = list(zip(df["init_angle"], df["init_speed"]))
+
+        # human readable format
+        df["theta"] = df["theta"].apply(np.degrees)
+
+        # plot as relplot
+        sns.relplot(
+            x="step",
+            y="theta",
+            hue="init_id",
+            kind="line",
+            data=df
+        )
+        # show the plot
+        plt.show()
+
+    return results
 
 
 def environment_performance():
