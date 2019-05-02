@@ -48,7 +48,7 @@ wm = world_model.WorldModelWrapper()
 
 wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
 env = pendulum.Pendulum()
-wm.train_model(env=env, max_iterations=5000, steps=17)
+wm.train_model(env=env, rollouts=500, steps=15)
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):

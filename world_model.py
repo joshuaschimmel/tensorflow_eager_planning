@@ -227,10 +227,10 @@ class WorldModelWrapper:
 
     def train_model(self,
                     env: pendulum.Pendulum,
-                    max_iterations: int = 100,
+                    rollouts: int = 100,
                     steps: int = 1,
                     learning_rate: float = 0.001,
-                    max_tests: int = 10,
+                    tests: int = 10,
                     loss_function=rmse_loss,
                     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Trains the model on an initialized gym environment.
@@ -271,18 +271,18 @@ class WorldModelWrapper:
         losses = []
         test_losses = []
 
-        iteration = 1
+        rollout_counter = 0
         try:
             # train with an iterator
             for rollout in pendulum.get_state_generator(steps):
+
                 # break loop if enough iterations have been made
-                # TODO Fix the double if statement
-                if iteration > max_iterations:
+                if rollout_counter >= rollouts:
                     break
+                rollout_counter += 1
+
+                step = 0
                 for data, target in rollout:
-                    # break loop if enough iterations have been made
-                    if iteration > max_iterations:
-                        break
                     # reshape for tensorflow batchsize 1
                     data = data.reshape(1, 4)
                     target = target.reshape(1, 3)
@@ -306,11 +306,14 @@ class WorldModelWrapper:
                     )
                     # log loss
                     loss = loss_value.numpy()
-                    losses.append(np.array([iteration, loss]))
+                    losses.append(np.array([rollout, step, loss]))
+
+                    step += 1
 
                     # output status to console
-                    print(f"{iteration}/{max_iterations}: Loss {loss}")
-                    iteration += 1
+                    print(f"rollout {rollout}/{rollouts}, "
+                          f"steps {step}/{steps}, "
+                          f"loss: {loss}")
 
             # save model
             self.save_model()
@@ -318,16 +321,16 @@ class WorldModelWrapper:
             # save the losses in a df for easy visualization
             losses_df = pd.DataFrame(
                 losses,
-                columns=["iteration", "loss"]
+                columns=["rollout", "step", "loss"]
             )
 
             # run tests
-            test_runs = 0
+            test_run = 0
             for rollout in pendulum.get_state_generator(1):
-                if test_runs > max_tests:
+                if test_run > tests:
                     break
                 for data, target in rollout:
-                    if test_runs > max_tests:
+                    if test_run > tests:
                         break
                     # reshape for tensorflow batchsize 1
                     data = data.reshape(1, 4)
@@ -341,10 +344,10 @@ class WorldModelWrapper:
                     # append loss to the list and keep last iteration
                     test_losses.append(np.array([
                         # reuse training variable for plotting
-                        iteration,
+                        test_run,
                         loss_value.numpy()
                     ]))
-                    test_runs += 1
+                    test_run += 1
             # create dataframe out of test losses
             test_losses_df = pd.DataFrame(
                 test_losses,

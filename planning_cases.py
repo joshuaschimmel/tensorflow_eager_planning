@@ -541,7 +541,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     return results
 
 
-def environment_angle_behavior(visualize: bool = False) -> np.DataFrame:
+def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
     """This functions shows how the environment can be influenced.
 
     This functions returns state transitions of theta using the max
