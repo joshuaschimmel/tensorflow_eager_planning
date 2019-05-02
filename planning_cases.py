@@ -175,6 +175,8 @@ def _unpack_state(rollout: int, step: int,
     return observations
 
 
+# TODO if time, use this function as a base for single error and model quality
+@DeprecationWarning
 def prediction_accuracy(model: world_model.WorldModelWrapper,
                         rollouts: int,
                         steps: int,
@@ -201,7 +203,7 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
     :return: dataframe with the values
     :rtype: pd.DataFrame
     """
-    # TODO if visualize=True -> visualize)
+    # TODO if visualize -> visualize)
     column_names = [
         "rollout", "step",
         "value_type", "feature_type",
@@ -239,6 +241,10 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
                                    columns=column_names,
                                    copy=True
                                    )
+
+    if visualize:
+        pass
+
     return observations_df
 
 
@@ -357,7 +363,7 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
     :return: pd.DataFrame
     """
     all_rmse_values = []
-    for i in range(rollouts):
+    for r in range(rollouts):
         # create a new random plan
         plan = pendulum.get_random_plan(steps)
 
@@ -375,7 +381,7 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
         step = 0
         for pred_state, sim_state in zip(pred_states, sim_states):
             current_rmse_values.append([
-                i,
+                r,
                 step,
                 world_model.single_rmse_loss(pred_state,
                                              sim_state
@@ -454,6 +460,7 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
 def angle_test(wmr: world_model.WorldModelWrapper,
                angles: list,
                speeds: list,
+               steps: int = 50,
                visualize: bool = False,
                ) -> pd.DataFrame:
     """Initializes with speeds and angles, returns true theta and dot values.
@@ -472,7 +479,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     """
     # hyperparameters
     _plan_length = 10
-    _steps = 50
+    _steps = steps
     _logs = []
     _columns = [
         "init_angle",
@@ -534,6 +541,59 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     return results
 
 
+def environment_angle_behavior(visualize: bool = False) -> np.DataFrame:
+    """This functions shows how the environment can be influenced.
+
+    This functions returns state transitions of theta using the max
+    axtion towards theta = 0. This shows, at what angles we can
+    expect the agent to hold up the pendulum.
+
+    :param visualize: whether results should be visualized,
+    defaults to False
+    :type visualize: bool, optional
+    :return: theta state transitions in rad in a dataframe
+    :rtype: np.DataFrame
+    """
+    # start with action 0
+    _action = 0
+    # push with maximal force counter clockwise
+    _max_left_action = -8
+    observations = []
+    # start states are in [0, 180]
+    start_rads = np.radians(np.arange(0, 181, 1))
+    # create the transitions
+    for theta_0 in start_rads:
+        starting_state = [theta_0, _action]
+        env = pendulum.Pendulum(state=starting_state)
+        _ = env(_max_left_action)
+        theta_1, theta_dot_1 = env.get_env_state()
+        observations.append([theta_0, theta_1, theta_dot_1])
+        env.close()
+    # put the data into a dataframe
+    results = pd.DataFrame(data=observations,
+                           columns=["theta_0", "theta_1", "theta_dot_1"]
+                           )
+    # visualize if needed
+    if visualize:
+        sns.set_context(context="paper")
+        sns.set(style="whitegrid")
+        df = results.copy(deep=True)
+        df["delta_theta"] = df["theta_0"] - df["theta_1"]
+        df["theta_0_deg"] = df["theta_0"].apply(np.degrees)
+        df["theta_1_deg"] = df["theta_1"].apply(np.degrees)
+        # plot as relplot
+        sns.relplot(
+            x="theta_0_deg",
+            y="delta_theta",
+            hue="delta_theta",
+            height=5,
+            legend=False,
+            aspect=3/1,
+            data=df
+        )
+    return results
+
+
 def environment_performance():
     # cumulative reward for an episode
     # TODO implement
@@ -542,5 +602,6 @@ def environment_performance():
 
 def best_environment_performance():
     # best '100-episode' performance
+    # => best performance for 100  rollouts?
     # TODO implement
     pass
