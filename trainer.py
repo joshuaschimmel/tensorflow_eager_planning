@@ -44,15 +44,11 @@ model_path = f"models/{model_name}.h5"
 
 
 wm = world_model.WorldModelWrapper()
-wm.load_model()
+# wm.load_model()
 
-# wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
-# wm.train_model(env=env, max_iterations=5000, steps=20)
-
-speeds = [-8, 0, 8]
-angles = np.arange(-45, 46, 5)
-
-planning_cases.angle_test(angles, speeds, wm)
+wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
+env = pendulum.Pendulum()
+wm.train_model(env=env, max_iterations=5000, steps=17)
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
@@ -60,10 +56,10 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     _rollouts = 200
     _steps = 100
     # eval behaviour of RMSE for a single rollout
-    planning_cases.eval_model_predictions(steps=_steps,
-                                          world_model_wrapper=wmr,
-                                          visualize=True
-                                          )
+    planning_cases.single_rollout_error(steps=_steps,
+                                        world_model_wrapper=wmr,
+                                        visualize=True
+                                        )
     # see RMSE for multiple rollouts
     planning_cases.model_quality_analysis(wmr=wmr,
                                           rollouts=_rollouts,
@@ -72,9 +68,10 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
                                           )
     # see whether the plan converges
     planning_cases.plan_convergence(wmr=wmr,
-                                    rollouts=_rollouts,
-                                    steps=_steps,
-                                    adaptation_rates=[0.1, 0.5, 1, 2]
+                                    plan_iterations=10,
+                                    plan_length=10,
+                                    adaptation_rates=[0.1, 0.5, 1, 2],
+                                    visualize=True
                                     )
     # check whether the agent can hold up the pendulum
     angles = [-30, 0, 30]  # TODO TBD angles
@@ -82,9 +79,12 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     planning_cases.angle_test(wmr=wmr,
                               angles=angles,
                               speeds=speeds,
+                              steps=200,
                               visualize=True
                               )
 
+
+test_world_model(wmr=wm)
 
 #planning_cases.eval_model_predictions(10, wm)
 
