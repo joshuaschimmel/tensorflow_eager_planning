@@ -52,7 +52,6 @@ wm.train_model(env=env, rollouts=500, steps=15)
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
-    # TODO implement pipeline to show the quality of the model
     _rollouts = 200
     _steps = 100
     # eval behaviour of RMSE for a single rollout
@@ -74,12 +73,12 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
                                     visualize=True
                                     )
     # check whether the agent can hold up the pendulum
-    angles = [-30, 0, 30]  # TODO TBD angles
+    angles = [-15, 0, 15]  # TODO TBD angles
     speeds = [-4, 0, 4]  # TODO TBD speeds
     planning_cases.angle_test(wmr=wmr,
                               angles=angles,
                               speeds=speeds,
-                              steps=200,
+                              steps=500,
                               visualize=True
                               )
 

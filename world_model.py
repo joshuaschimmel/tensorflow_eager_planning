@@ -311,9 +311,9 @@ class WorldModelWrapper:
                     step += 1
 
                     # output status to console
-                    print(f"rollout {rollout}/{rollouts}, "
+                    print(f"rollout {rollout_counter}/{rollouts}, "
                           f"steps {step}/{steps}, "
-                          f"loss: {loss}")
+                          f"loss: {loss}\n")
 
             # save model
             self.save_model()
