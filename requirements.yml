@@ -86,6 +86,7 @@ dependencies:
   - mkl=2018.0.3=1
   - mkl_fft=1.0.6=py36h7dd41cf_0
   - mkl_random=1.0.1=py36h4414c95_1
+  - mock=2.0.0=py36_0
   - nbconvert=5.3.1=py36_0
   - nbformat=4.4.0=py36_0
   - ncurses=6.1=hfc679d8_1
@@ -100,6 +101,7 @@ dependencies:
   - pandocfilters=1.4.2=py36_1
   - parso=0.3.1=py36_0
   - patsy=0.5.1=py36_0
+  - pbr=5.1.3=py_0
   - pcre=8.42=h439df22_0
   - pexpect=4.6.0=py36_0
   - pickleshare=0.7.5=py36_0
@@ -130,9 +132,10 @@ dependencies:
   - snappy=1.1.7=hbae5bb6_3
   - sqlite=3.25.3=hb1c47c0_0
   - statsmodels=0.9.0=py36h035aef0_0
-  - tensorboard=1.12.0=py36hf484d3e_0
-  - tensorflow=1.12.0=mkl_py36h69b6ba0_0
-  - tensorflow-base=1.12.0=mkl_py36h3c3e929_0
+  - tensorboard=1.13.1=py36hf484d3e_0
+  - tensorflow=1.13.1=mkl_py36h27d456a_0
+  - tensorflow-base=1.13.1=mkl_py36h7ce6ba3_0
+  - tensorflow-estimator=1.13.0=py_0
   - termcolor=1.1.0=py36_1
   - terminado=0.8.1=py36_1
   - testpath=0.4.2=py36_0
