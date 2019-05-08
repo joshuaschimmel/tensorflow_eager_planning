@@ -78,6 +78,7 @@ def rmse_loss(model: tf.keras.Model,
     :param model_target: target|teacher values
     :return: RMSE value
     """
+    model_input = model_input.astype("float32")
     model_output = model(model_input)
     return tf.sqrt(
         tf.losses.mean_squared_error(labels=model_target,
@@ -98,6 +99,8 @@ def single_rmse_loss(output: np.array, target: np.array) -> float:
     """
     # TODO Accept matrices
     # TODO Use tf functions
+    output = output.astype("float32")
+    target = target.astype("float32")
     return np.sqrt(
         np.mean(
             np.square(
@@ -206,7 +209,8 @@ class WorldModelWrapper:
         # add input layer with input shape
         model.add(tf.keras.layers.Dense(neurons,
                                         input_shape=input_shape,
-                                        activation=tf.nn.relu
+                                        activation=tf.nn.relu,
+                                        dtype="float32"
                                         ))
 
         # add any additional dense layers
@@ -395,7 +399,7 @@ class WorldModelWrapper:
             next_input = np.append(current_state, next_action)
             # shape the input for the model
             # into the form [[current_state]]
-            next_input = next_input.reshape(1, 4)
+            next_input = next_input.reshape(1, 4).astype("float32")
             # let the model predict the next state
             prediction = self.model(next_input)
             # and cast the returned tensor to an np array

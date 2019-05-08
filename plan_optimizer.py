@@ -210,11 +210,11 @@ class Planner:
                             # epsilon, current iteration
                             e,
                             # loss for this action
-                            loss,
+                            np.asscalar(loss.numpy()),
                             # the position of the loss
                             loss_pos,
                             # the gradient
-                            grad,
+                            np.asscalar(grad.numpy()),
                             # the position of the action
                             taken_action_i,
                         ]))
@@ -229,7 +229,7 @@ class Planner:
             # apply the sums to each action
             for grad, action in zip(grads, self.plan):
                 # add gradients weighted with adaptation rate
-                action.assign_add(grad * self.adaptation_rate)
+                action.assign_add(tf.reshape(grad, []) * self.adaptation_rate)
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
