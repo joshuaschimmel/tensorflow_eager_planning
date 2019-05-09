@@ -145,7 +145,8 @@ def get_state_generator(steps: int):
     while True:
         # create env and list
         env = Pendulum(render=False)
-        rollout_transitions = []
+        rollout_feature = []
+        rollout_target = []
         # get the first state
         current_state = env.get_state()
         for _ in range(steps):
@@ -156,8 +157,11 @@ def get_state_generator(steps: int):
             # get the next state
             current_state = env(next_action)
             # save the tuple
-            rollout_transitions.append([last_input, current_state])
+            rollout_feature.append(last_input)
+            rollout_target.append(current_state)
         # close the current env
         env.close()
         # yield the states
-        yield rollout_transitions
+        yield (np.array(rollout_feature, dtype="float32"),
+               np.array(rollout_target, dtype="float32")
+               )

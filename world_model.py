@@ -280,40 +280,34 @@ class WorldModelWrapper:
                 if rollout_counter >= rollouts:
                     break
                 rollout_counter += 1
+                # extract training data from rollout
+                feature, target = rollout
 
-                step = 0
-                for data, target in rollout:
-                    # reshape for tensorflow batchsize 1
-                    data = data.reshape(1, 4)
-                    target = target.reshape(1, 3)
-
-                    # calculate loss in GradientTape
-                    with tf.GradientTape() as tape:
-                        loss_value = loss_function(
-                            self.model,
-                            data,
-                            target
-                        )
-                    # get the gradients
-                    grads = tape.gradient(
-                        loss_value,
-                        self.model.variables
+                # calculate loss in GradientTape
+                with tf.GradientTape() as tape:
+                    loss_value = loss_function(
+                        self.model,
+                        feature,
+                        target
                     )
-                    # apply gradients
-                    optimizer.apply_gradients(
-                        zip(grads, self.model.variables),
-                        global_step=tf.train.get_or_create_global_step()
-                    )
-                    # log loss
-                    loss = loss_value.numpy()
-                    losses.append(np.array([rollout, step, loss]))
+                # get the gradients
+                grads = tape.gradient(
+                    loss_value,
+                    self.model.variables
+                )
+                # apply gradients
+                optimizer.apply_gradients(
+                    zip(grads, self.model.variables),
+                    global_step=tf.train.get_or_create_global_step()
+                )
+                # log loss
+                loss = loss_value.numpy()
+                # TODO unpack losses
+                losses.append(np.array([rollout, loss]))
 
-                    step += 1
-
-                    # output status to console
-                    print(f"rollout {rollout_counter}/{rollouts}, "
-                          f"steps {step}/{steps}, "
-                          f"loss: {loss}\n")
+                # output status to console
+                print(f"rollout {rollout_counter}/{rollouts}, "
+                      f"loss: {loss}\n")
 
             # save model
             self.save_model()
@@ -321,33 +315,30 @@ class WorldModelWrapper:
             # save the losses in a df for easy visualization
             losses_df = pd.DataFrame(
                 losses,
-                columns=["rollout", "step", "loss"]
+                columns=["rollout", "mean_loss"]
             )
 
             # run tests
             test_run = 0
-            for rollout in pendulum.get_state_generator(1):
+            for data, target in pendulum.get_state_generator(1):
                 if test_run > tests:
                     break
-                for data, target in rollout:
-                    if test_run > tests:
-                        break
-                    # reshape for tensorflow batchsize 1
-                    data = data.reshape(1, 4)
-                    target = target.reshape(1, 3)
-                    # calc the loss value
-                    loss_value = loss_function(
-                        self.model,
-                        data,
-                        target
-                    )
-                    # append loss to the list and keep last iteration
-                    test_losses.append(np.array([
-                        # reuse training variable for plotting
-                        test_run,
-                        loss_value.numpy()
-                    ]))
-                    test_run += 1
+                # reshape for tensorflow batchsize 1
+                #data = data.reshape(1, 4)
+                #target = target.reshape(1, 3)
+                # calc the loss value
+                loss_value = loss_function(
+                    self.model,
+                    data,
+                    target
+                )
+                # append loss to the list and keep last iteration
+                test_losses.append(np.array([
+                    # reuse training variable for plotting
+                    test_run,
+                    loss_value.numpy()
+                ]))
+                test_run += 1
             # create dataframe out of test losses
             test_losses_df = pd.DataFrame(
                 test_losses,
