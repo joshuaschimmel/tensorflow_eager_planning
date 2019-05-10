@@ -222,7 +222,6 @@ class WorldModelWrapper:
         model.add(tf.keras.layers.Dropout(dropout_rate))
 
         # add output layer
-        # TODO: check if output shape is correct
         model.add(tf.keras.layers.Dense(output_shape))
 
         self.model = model

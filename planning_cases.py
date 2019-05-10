@@ -89,61 +89,34 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
     result_df = pd.DataFrame(log_list, columns=column_names)
 
     # create visualization if setting is on
+    figure = None
     if visualize:
         df = result_df.copy(deep=True)
         # calc df with absolut grads
-        df_abs = df.copy(deep=True)
-        df_abs["grad"] = df_abs["grad"].apply(lambda x: np.absolute(x))
-        df_abs["grad"].describe()
 
         # adaptation rate - convergence plot for a0
         # overview
         df_a0 = df[df["action_nr"] == 0]
-        df_a0_abs = df_abs[df_abs["action_nr"] == 0]
-        sns.relplot(x="iteration",
-                    y="grad",
-                    # hue="loss_nr",
-                    palette=sns.color_palette(
-                        palette="Blues", n_colors=10, desat=0.8),
-                    linewidth=1,
-                    row="adaptation_rate",
-                    col="loss_nr",
-                    kind="line", data=df_a0_abs)
-
-        # adaptation rate - convergence plot for a0
-        # all grad causes in one plot
-        sns.relplot(x="iteration",
-                    y="grad",
-                    hue="loss_nr",
-                    palette=sns.color_palette(
-                        palette="Blues", n_colors=10, desat=0.8),
-                    linewidth=1,
-                    height=7,
-                    aspect=2.5,
-                    row="adaptation_rate",
-                    kind="line",
-                    data=df_a0)
-
         # adaption rate - convergence plot for a0 again, but with catplot
-        sns.catplot(x="loss_nr",
-                    y="grad",
-                    row="adaptation_rate",
-                    col="action_nr",
-                    height=4,
-                    # ratio=1,
-                    data=df
-                    )
+        g_point = sns.catplot(x="loss_nr",
+                              y="grad",
+                              row="adaptation_rate",
+                              col="action_nr",
+                              height=4,
+                              # ratio=1,
+                              data=df
+                              )
 
         # plot influence on action 0 by loss
-        sns.catplot(x="loss_nr",
-                    y="grad",
-                    row="adaptation_rate",
-                    kind="box",
-                    data=df_a0
-                    )
-        plt.show()
+        g_box = sns.catplot(x="loss_nr",
+                            y="grad",
+                            row="adaptation_rate",
+                            kind="box",
+                            data=df_a0
+                            )
+        figure = g_box.fig
 
-    return result_df
+    return result_df, figure
 
 
 def _unpack_state(rollout: int, step: int,
@@ -312,6 +285,7 @@ def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
                                    columns=columns,
                                    copy=True
                                    )
+    figure = None
     if visualize:
         states = observations_df[
             observations_df["source"].str.contains("RMSE") == False
@@ -338,9 +312,8 @@ def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
                      legend=False,
                      data=errors,
                      ax=g.ax)
-        plt.show()
-
-    return observations_df
+        figure = g.fig
+    return observations_df, figure
 
 
 def model_quality_analysis(wmr: world_model.WorldModelWrapper,
@@ -409,21 +382,10 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
     # append the mean df to the main df
     df_all = pd.concat([df, df_mean], sort=False)
 
+    figure = None
     if visualize:
         sns.set(style="ticks")
-        # function for general overview
-        sns.relplot(x="step",
-                    y="rmse",
-                    kind="line",
-                    # units="rollout",
-                    # hue="rollout",
-                    ci="sd",
-                    # estimator=None,
-                    alpha=1,
-                    height=5,
-                    aspect=6/2,
-                    data=df
-                    )
+
         palette = sns.cubehelix_palette(
             n_colors=len(df["rollout"].unique()),
             start=1,
@@ -445,6 +407,19 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
                         legend=False,
                         data=df
                         )
+        sns.relplot(x="step",
+                    y="rmse",
+                    kind="line",
+                    # units="rollout",
+                    # hue="rollout",
+                    ci="sd",
+                    # estimator=None,
+                    alpha=1,
+                    height=5,
+                    aspect=6/2,
+                    data=df,
+                    ax=g.ax
+                    )
         sns.lineplot(x="step",
                      y="rmse",
                      linewidth=4,
@@ -452,9 +427,9 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
                      data=df_mean,
                      ax=g.ax
                      )
-        plt.show()
+        figure = g.fig
 
-    return df_all
+    return df_all, figure
 
 
 def angle_test(wmr: world_model.WorldModelWrapper,
@@ -517,7 +492,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
             # close the environment after the rollout
             env.close()
     results = pd.DataFrame(data=_logs, columns=_columns)
-
+    figure = None
     if visualize:
         df = results.copy(deep=True)
 
@@ -528,17 +503,16 @@ def angle_test(wmr: world_model.WorldModelWrapper,
         df["theta"] = df["theta"].apply(np.degrees)
 
         # plot as relplot
-        sns.relplot(
+        g = sns.relplot(
             x="step",
             y="theta",
             hue="init_id",
             kind="line",
             data=df
         )
-        # show the plot
-        plt.show()
+        figure = g.fig
 
-    return results
+    return results, figure
 
 
 def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
@@ -574,6 +548,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
                            columns=["theta_0", "theta_1", "theta_dot_1"]
                            )
     # visualize if needed
+    figure = None
     if visualize:
         sns.set_context(context="paper")
         sns.set(style="whitegrid")
@@ -582,7 +557,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
         df["theta_0_deg"] = df["theta_0"].apply(np.degrees)
         df["theta_1_deg"] = df["theta_1"].apply(np.degrees)
         # plot as relplot
-        sns.relplot(
+        g = sns.relplot(
             x="theta_0_deg",
             y="delta_theta",
             hue="delta_theta",
@@ -591,7 +566,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
             aspect=3/1,
             data=df
         )
-    return results
+    return results, figure
 
 
 def environment_performance():

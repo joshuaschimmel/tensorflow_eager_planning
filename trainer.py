@@ -46,42 +46,45 @@ model_path = f"models/{model_name}.h5"
 wm = world_model.WorldModelWrapper()
 # wm.load_model()
 
-wm.build_keras_model(neurons=20, hidden_layers=1, dropout_rate=0)
+wm.build_keras_model(neurons=40, hidden_layers=2, dropout_rate=0)
 env = pendulum.Pendulum()
 wm.train_model(env=env, rollouts=10, steps=1)
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
-    _rollouts = 200
-    _steps = 100
+    _rollouts = 2
+    _steps = 10
     # eval behaviour of RMSE for a single rollout
-    # planning_cases.single_rollout_error(steps=_steps,
-    #                                     world_model_wrapper=wmr,
-    #                                     visualize=True
-    #                                     )
-    # # see RMSE for multiple rollouts
-    # planning_cases.model_quality_analysis(wmr=wmr,
-    #                                       rollouts=_rollouts,
-    #                                       steps=_steps,
-    #                                       visualize=True
-    #                                       )
+    data1, f1 = planning_cases.single_rollout_error(
+        steps=_steps,
+        world_model_wrapper=wmr,
+        visualize=True
+    )
+    # see RMSE for multiple rollouts
+    data2, f2 = planning_cases.model_quality_analysis(
+        wmr=wmr,
+        rollouts=_rollouts,
+        steps=_steps,
+        visualize=True
+    )
     # see whether the plan converges
-    #planning_cases.plan_convergence(wmr=wmr,
-     #                               plan_iterations=10,
-      #                              plan_length=10,
-       #                             adaptation_rates=[0.1, 0.5, 1, 2],
-        #                            visualize=True
-         #                           )
+    data3, f3 = planning_cases.plan_convergence(wmr=wmr,
+                                                plan_iterations=10,
+                                                plan_length=10,
+                                                adaptation_rates=[
+                                                    0.1, 0.5, 1, 2],
+                                                visualize=True
+                                                )
     # check whether the agent can hold up the pendulum
     angles = [-15, 0, 15]  # TODO TBD angles
     speeds = [-4, 0, 4]  # TODO TBD speeds
-    with tf.device("GPU:0"):
-        planning_cases.angle_test(wmr=wmr,
-                                angles=angles,
-                                speeds=speeds,
-                                steps=500,
-                                visualize=True
-                                )
+    data4, f4 = planning_cases.angle_test(wmr=wmr,
+                                          angles=angles,
+                                          speeds=speeds,
+                                          steps=1,
+                                          visualize=True
+                                          )
+    plt.show()
 
 
 test_world_model(wmr=wm)
