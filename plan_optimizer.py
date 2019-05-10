@@ -167,7 +167,7 @@ class Planner:
                     taken_actions.append(action)
                     # flatten the state and calculate the loss
                     # TODO add action taken to reinforcement
-                    loss_value = reinforcement(tf.squeeze(prediction_state))
+                    loss_value = reward(prediction_state, action)
                     # add the loss value together with the actions that
                     # led up to it and add them
                     # to the list of derivatives
@@ -252,7 +252,7 @@ class Planner:
         return logs
 
 
-def reinforcement(state: tf.Tensor):
+def reward(states: tf.Tensor, taken_actions: tf.Variable):
     """Calculates the reinforcement for a state
 
     This reinforcement is a loss depending on the angle of
@@ -263,10 +263,14 @@ def reinforcement(state: tf.Tensor):
     :param state: A Tensor of shape (3,)
     :return: a scalar reinforcement value
     """
-    # TODO add last action taken to reinforcement
-    return -(tf.square(tf.subtract(state[0], 1))
-             + tf.square(state[1])
-             + 0.01 * tf.square(state[2]))
+    # -\left(\left(c\right)^2\ +\ 0.1\cdot d^2\ +\ 0.001\cdot i^2\right)
+    # because the prediction for cos can be outside [-1, 1]
+    # and calculateing theta is too expensive
+    rewards = -(tf.square(states[:, 0] - 1)
+                + 0.1 * tf.square(states[:, 2])
+                + 0.001 * tf.square(taken_actions)
+                )
+    return rewards
 
 
 def get_random_plan(steps: int) -> list:
