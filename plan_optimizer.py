@@ -125,7 +125,8 @@ class Planner:
         """
         logs = [] if self.return_logs else None
         for e in range(self.iterations):
-            #print(f"Iteration {e + 1}")
+            # print(f"Iteration {e + 1}"
+            global_step = tf.Variable(0)
 
             # log the starting time for each iteration
             start_time = time.time()
@@ -221,15 +222,23 @@ class Planner:
 
                     # update counter
                     taken_action_i += 1
+            grads = [
+                (tf.reshape(x, []) * -1)for x in grads
+            ]
 
             # Log the time when gradients were calculated
             grad_time = time.time()
             #print(f"Grad Time: {grad_time - tape_time}")
 
+            # TODO use optimizer
+            optimizer = tf.train.GradientDescentOptimizer(self.adaptation_rate)
             # apply the sums to each action
-            for grad, action in zip(grads, self.plan):
-                # add gradients weighted with adaptation rate
-                action.assign_add(tf.reshape(grad, []) * self.adaptation_rate)
+            # for grad, action in zip(grads, self.plan):
+            # add gradients weighted with adaptation rate
+            optimizer.apply_gradients(
+                zip(grads, self.plan),
+                global_step)
+            #action.assign_add(tf.reshape(grad, []) * self.adaptation_rate)
 
             # Log time when the gradients where assigned to the actions
             end_time = time.time()
