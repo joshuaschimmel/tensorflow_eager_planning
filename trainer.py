@@ -46,9 +46,9 @@ model_path = f"models/{model_name}.h5"
 wm = world_model.WorldModelWrapper()
 # wm.load_model()
 
-wm.build_keras_model(neurons=60, hidden_layers=3, dropout_rate=0)
+wm.build_keras_model(neurons=20, hidden_layers=0, dropout_rate=0)
 env = pendulum.Pendulum()
-train_l, test_l = wm.train_model(env=env, rollouts=2500, steps=64)
+train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
 ax = train_l.plot(x="rollout", y="mean_loss")
 test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
 test_l.plot(x="test_position", y="test_loss",
@@ -83,12 +83,12 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     #                                         visualize=True
     #                                         )
     # # check whether the agent can hold up the pendulum
-    # angles = [-15, 0, 15]  # TODO TBD angles
-    # speeds = [-2, 0, 2]  # TODO TBD speeds
+    # angles = [0]  # TODO TBD angles
+    # speeds = [0]  # TODO TBD speeds
     # _, f4 = planning_cases.angle_test(wmr=wmr,
     #                                   angles=angles,
     #                                   speeds=speeds,
-    #                                   steps=100,
+    #                                   steps=20,
     #                                   visualize=True
     #                                   )
     plt.show()

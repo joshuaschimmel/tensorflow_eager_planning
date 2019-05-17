@@ -202,11 +202,11 @@ class WorldModelWrapper:
         :rtype: tf.keras.Model
         """
         # number of hidden layers is 0 if hidden_layers is smaller than that
-        _layers = 0 if hidden_layers < 0 else hidden_layers
+        _layers = max(0, hidden_layers - 1)
 
         # prepare model by gettin a simple sequential object
         model = tf.keras.Sequential()
-        # add input layer with input shape
+        # add input layer with input shape and first hidden layer
         model.add(tf.keras.layers.Dense(neurons,
                                         input_shape=input_shape,
                                         activation=tf.nn.relu,
@@ -219,7 +219,7 @@ class WorldModelWrapper:
                                             activation=tf.nn.relu
                                             ))
         # add dropout layer
-        model.add(tf.keras.layers.Dropout(dropout_rate))
+        # model.add(tf.keras.layers.Dropout(dropout_rate))
 
         # add output layer
         model.add(tf.keras.layers.Dense(output_shape))
