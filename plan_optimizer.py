@@ -168,7 +168,7 @@ class Planner:
                     taken_actions.append(action)
                     # flatten the state and calculate the loss
                     # TODO add action taken to reinforcement
-                    loss_value = reward(prediction_state, action)
+                    loss_value = reward(prediction_state, action) * -1
                     # add the loss value together with the actions that
                     # led up to it and add them
                     # to the list of derivatives
@@ -223,7 +223,7 @@ class Planner:
                     # update counter
                     taken_action_i += 1
             grads = [
-                (tf.reshape(x, []) * -1)for x in grads
+                tf.reshape(x, []) for x in grads
             ]
 
             # Log the time when gradients were calculated
@@ -231,7 +231,10 @@ class Planner:
             #print(f"Grad Time: {grad_time - tape_time}")
 
             # TODO use optimizer
-            optimizer = tf.train.GradientDescentOptimizer(self.adaptation_rate)
+            optimizer = tf.train.GradientDescentOptimizer(
+                self.adaptation_rate
+            )
+            # optimizer = tf.train.AdamOptimizer(self.adaptation_rate)
             # apply the sums to each action
             # for grad, action in zip(grads, self.plan):
             # add gradients weighted with adaptation rate
