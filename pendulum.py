@@ -94,6 +94,12 @@ class Pendulum:
         self.state = self.env.env._get_obs()
         return self.state
 
+    def reset(self) -> np.array:
+        """Resets the pendulum."""
+        self.state = self.env.reset()
+
+        return self.get_state()
+
 
 def get_random_action() -> float:
     """Returns a random float in [-2, 2)"""
@@ -115,7 +121,7 @@ def run_simulation_plan(plan: list, render: bool = False) -> list:
     # theta is in [-pi, pi), thetadot is in [-1, 1)
     env = Pendulum(render=render)
     # get the state
-    state_0 = env.get_state()
+    state_0 = env.reset()
     # save first state in the list
     simulation_states = [state_0]
 
