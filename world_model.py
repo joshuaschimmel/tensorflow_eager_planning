@@ -201,7 +201,7 @@ class WorldModelWrapper:
         :return: the current modl
         :rtype: tf.keras.Model
         """
-        # number of hidden layers is 0 if hidden_layers is smaller than that
+        # keras adds the first hidden layer implicitly
         _layers = max(0, hidden_layers - 1)
 
         # prepare model by gettin a simple sequential object
@@ -400,3 +400,7 @@ class WorldModelWrapper:
             current_state = prediction
 
         return predicted_states
+
+    def print_summary(self):
+        """Prints the model summary."""
+        self.model.summary()

@@ -46,9 +46,11 @@ model_path = f"models/{model_name}.h5"
 wm = world_model.WorldModelWrapper()
 # wm.load_model()
 
-wm.build_keras_model(neurons=20, hidden_layers=0, dropout_rate=0)
+wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
+wm.print_summary()
 env = pendulum.Pendulum()
 train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
+wm.print_summary()
 ax = train_l.plot(x="rollout", y="mean_loss")
 test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
 test_l.plot(x="test_position", y="test_loss",
