@@ -285,23 +285,38 @@ def reward(states: tf.Tensor, taken_actions: tf.Variable):
     return rewards
 
 
-def get_random_plan(steps: int) -> list:
-    """Returns a list of random tf Variables for planning.
-
-    :param steps: length of the list
-    :return: list with random float32s as tf.Variables
-    """
-    # initialize a random plan of with _steps steps
-    plan = []
-    for _ in range(steps):
-        plan.append(get_random_action())
-
-    return plan
-
-
 def get_random_action() -> tf.Variable:
     """Returns a random action as tf Variable in [-2 ,2]
 
     :return: uniform random tf.Variable in [-2, 2]
     """
     return tf.Variable(pendulum.get_random_action(), dtype=tf.float32)
+
+
+def get_zero_action() -> tf.Variable:
+    """Returns a zero action (do nothing) as a tf Variable.
+
+    :return: the "do-nothing" action
+    :rtype: tf.Variable
+    """
+    return tf.Variable(pendulum.get_zero_action(), dtype=tf.float32)
+
+
+def get_random_plan(steps: int) -> list:
+    """Returns a list of random tf Variables for planning.
+
+    :param steps: length of the list
+    :return: list with random float32s as tf.Variables
+    """
+    return [get_random_action() for _ in range(steps)]
+
+
+def get_zero_plan(steps: int) -> list:
+    """Returns a list of zero tf Variables for planning
+
+    :param steps: number of steps in the plan
+    :type steps: int
+    :return: list with Variables of dtype float32 containting zero
+    :rtype: list
+    """
+    return [get_zero_action() for _ in range(steps)]

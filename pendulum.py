@@ -129,9 +129,19 @@ def get_random_action() -> float:
     return np.random.uniform(-2, 2)
 
 
+def get_zero_action() -> float:
+    """Returns 0 as float, implicating that this action does nothing."""
+    return 0.0
+
+
 def get_random_plan(steps: int) -> np.array:
     """Returns an array with steps random actions."""
     return np.array([get_random_action() for _ in range(steps)])
+
+
+def get_zero_plan(steps: int) -> np.array:
+    """Returns an array of length steps with zeros"""
+    return np.array([get_zero_action() for _ in range(steps)])
 
 
 def run_simulation_plan(plan: list, render: bool = False) -> list:

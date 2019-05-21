@@ -599,6 +599,7 @@ def environment_performance(planner: po.Planner,
 
     if visualize:
         # TODO visualize the gain of reinforcements
+        pass
     return accumulated_reinforcement, reinforcements
 
 
