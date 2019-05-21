@@ -162,7 +162,7 @@ def prediction_accuracy(model: world_model.WorldModelWrapper,
     dataframe.
     This can be done for a number of random
     rollouts and consecutive steps per rollout.
-    The dataframe is in long-form, with the 
+    The dataframe is in long-form, with the
     feature type, the value type (prediction or truth)
     and the value itself as their respective columns.
 
@@ -441,7 +441,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     """Initializes with speeds and angles, returns true theta and dot values.
 
     This case tests the planning algorithm for a set of starting angles
-    and speeds. The agent then has to solve the task. Observations of 
+    and speeds. The agent then has to solve the task. Observations of
     true theta and thetadot values will be returned as observations in a
     DataFrame.
 
@@ -569,10 +569,37 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
     return results, figure
 
 
-def environment_performance():
-    # cumulative reward for an episode
-    # TODO implement
-    pass
+def environment_performance(planner: po.Planner,
+                            steps: int,
+                            visualize: bool = False
+                            ) -> float:
+    """Executes the Planner for a number of steps.
+
+    :param planner: plan optimizer to produce an optimal plan
+    :type planner: po.Planner
+    :param steps: number of steps to do
+    :type steps: int
+    :param visualize: whether results should be visualized,
+        defaults to False
+    :type visualize: bool, optional
+    :return: the accumulated reinforcement and list of reinforcements
+    :rtype: float, list
+    """
+    env = pendulum.Pendulum()
+    current_state = env.get_state()
+    reinforcements = [env.get_reinforcement()]
+
+    for step in range(steps):
+        print(f"step {step}/{steps}")
+        next_action, = planner.plan_next_step(current_state)
+        current_state = env(next_action)
+        reinforcements.append(env.get_reinforcement())
+    accumulated_reinforcement = env.get_accumulated_reinforcement()
+    env.close()
+
+    if visualize:
+        # TODO visualize the gain of reinforcements
+    return accumulated_reinforcement, reinforcements
 
 
 def best_environment_performance():
