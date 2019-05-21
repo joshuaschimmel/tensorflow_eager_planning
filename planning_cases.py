@@ -487,13 +487,14 @@ def angle_test(wmr: world_model.WorldModelWrapper,
             for step in range(_steps):
                 print(f"current step: {step}")
                 next_action, _ = plan_optimizer.plan_next_step(current_state)
-                current_state = env(next_action)
+                current_state, _ = env(next_action)
                 _logs.append([angle, speed, step + 1, *env.get_env_state()])
             # close the environment after the rollout
             env.close()
     results = pd.DataFrame(data=_logs, columns=_columns)
     figure = None
     if visualize:
+        sns.set(style="ticks")
         df = results.copy(deep=True)
 
         # zip speed and angle together to create an init option identifier
@@ -539,7 +540,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
     for theta_0 in start_rads:
         starting_state = [theta_0, _action]
         env = pendulum.Pendulum(state=starting_state)
-        _ = env(_max_left_action)
+        _, _ = env(_max_left_action)
         theta_1, theta_dot_1 = env.get_env_state()
         observations.append([theta_0, theta_1, theta_dot_1])
         env.close()
@@ -566,6 +567,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
             aspect=3/1,
             data=df
         )
+        figure = g.fig
     return results, figure
 
 
@@ -587,20 +589,44 @@ def environment_performance(planner: po.Planner,
     """
     env = pendulum.Pendulum()
     current_state = env.get_state()
-    reinforcements = [env.get_reinforcement()]
+    reinforcements = [[0, env.get_reinforcement()]]
 
     for step in range(steps):
         print(f"step {step}/{steps}")
-        next_action, = planner.plan_next_step(current_state)
-        current_state = env(next_action)
-        reinforcements.append(env.get_reinforcement())
+        next_action, _ = planner.plan_next_step(current_state)
+        current_state, reinf = env(next_action)
+        print(reinf)
+        reinforcements.append([step, reinf])
     accumulated_reinforcement = env.get_accumulated_reinforcement()
     env.close()
 
+    figure = None
     if visualize:
-        # TODO visualize the gain of reinforcements
-        pass
-    return accumulated_reinforcement, reinforcements
+        df = pd.DataFrame(data=reinforcements,
+                          columns=["step", "reinforcement"]
+                          )
+        df["cumsum"] = df["reinforcements"].cumsum()
+
+        sns.set_context(context="paper")
+        sns.set(style="whitegrid")
+        g = sns.relplot(x="step",
+                        y="reinforcement",
+                        height=5,
+                        legend=False,
+                        aspect=3/1,
+                        data=df
+                        )
+        sns.relplot(x="step",
+                    y="cumsum",
+                    height=5,
+                    legend=False,
+                    aspect=3/1,
+                    ax=g.ax,
+                    data=df)
+        figure = g.fig
+
+    return ((accumulated_reinforcement, reinforcements),
+            figure)
 
 
 def best_environment_performance():

@@ -194,7 +194,7 @@ def get_state_generator(steps: int):
             # create the s_0, action tuple
             last_input = np.append(current_state, next_action)
             # get the next state
-            current_state = env(next_action)
+            current_state, _ = env(next_action)
             # save the tuple
             rollout_feature.append(last_input)
             rollout_target.append(current_state)
