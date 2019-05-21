@@ -1,5 +1,6 @@
 import gym
 import csv
+import copy
 import numpy as np
 import pandas as pd
 from typing import List
@@ -37,6 +38,8 @@ class Pendulum:
 
         # set state
         self.state = self.env.reset()
+        self.acc_reinf = 0
+        self.reinforcement = 0
 
         # if given, set the state
         if state is not None:
@@ -58,15 +61,17 @@ class Pendulum:
         """
         # do the action
         # return is new_state, reward, done, info
-        new_state, _, _, _ = self.env.step([action])
+        new_state, new_reinforcement, _, _ = self.env.step([action])
         # return the new state
         self.state = new_state
+        self.acc_reinf += new_reinforcement
+        self.reinforcement = new_reinforcement
 
         # render the environment
         if self.render:
             self.env.render(mode="human")
 
-        return self.get_state()
+        return (self.get_state(), self.get_reinforcement())
 
     def close(self):
         """Closes the environment."""
@@ -80,6 +85,22 @@ class Pendulum:
         :return: state of the environment
         """
         return np.copy(self.state)
+
+    def get_reinforcement(self) -> float:
+        """Returns a copy of the reinforcement recieved for the last action.
+
+        :return: last recieved reinforcement
+        :rtype: float
+        """
+        return copy.copy(self.reinforcement)
+
+    def get_accumulated_reinforcement(self) -> float:
+        """Returns the accumulated reinforcement
+
+        :return: accumulated reinforcement
+        :rtype: float
+        """
+        return copy.copy(self.acc_reinf)
 
     def get_env_state(self) -> np.ndarray:
         """Gets the state of the backend gym environment object.
@@ -97,6 +118,8 @@ class Pendulum:
     def reset(self) -> np.array:
         """Resets the pendulum."""
         self.state = self.env.reset()
+        self.reinforcement = 0
+        self.acc_reinf = 0
 
         return self.get_state()
 
