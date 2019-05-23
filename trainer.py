@@ -63,19 +63,19 @@ env = pendulum.Pendulum()
 def test_world_model(wmr: world_model.WorldModelWrapper):
     _rollouts = 200
     _steps = 100
-    # eval behaviour of RMSE for a single rollout
-    _, f1 = planning_cases.single_rollout_error(
-        steps=_steps,
-        world_model_wrapper=wmr,
-        visualize=True
-    )
-    # see RMSE for multiple rollouts
-    _, f2 = planning_cases.model_quality_analysis(
-        wmr=wmr,
-        rollouts=_rollouts,
-        steps=_steps,
-        visualize=True
-    )
+    # # eval behaviour of RMSE for a single rollout
+    # _, f1 = planning_cases.single_rollout_error(
+    #     steps=_steps,
+    #     world_model_wrapper=wmr,
+    #     visualize=True
+    # )
+    # # see RMSE for multiple rollouts
+    # _, f2 = planning_cases.model_quality_analysis(
+    #     wmr=wmr,
+    #     rollouts=_rollouts,
+    #     steps=_steps,
+    #     visualize=True
+    # )
     # see whether the plan converges
     _, f3 = planning_cases.plan_convergence(wmr=wmr,
                                             plan_iterations=10,
@@ -85,7 +85,7 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
                                             visualize=True
                                             )
     # check whether the agent can hold up the pendulum
-    angles = [-15, -10, -5, 0, 5, 10, 15]  # TODO TBD angles
+    angles = [-20, -15, 0, 15, 20]  # TODO TBD angles
     speeds = [0]  # TODO TBD speeds
     _, f4 = planning_cases.angle_test(wmr=wmr,
                                       angles=angles,
