@@ -437,6 +437,7 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
 def angle_test(wmr: world_model.WorldModelWrapper,
                angles: list,
                speeds: list,
+               plan_length: int = 10,
                steps: int = 50,
                visualize: bool = False,
                ) -> pd.DataFrame:
@@ -455,7 +456,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     :rtype: pd.DataFrame
     """
     # hyperparameters
-    _plan_length = 10
+    _plan_length = plan_length
     _steps = steps
     _logs = []
     _columns = [
@@ -477,7 +478,7 @@ def angle_test(wmr: world_model.WorldModelWrapper,
 
             # initialize the plan optimizer
             plan_optimizer = po.Planner(world_model=wmr.get_model(),
-                                        learning_rate=1,
+                                        learning_rate=0.1,
                                         iterations=10,
                                         initial_plan=plan,
                                         fill_function=po.get_zero_action,

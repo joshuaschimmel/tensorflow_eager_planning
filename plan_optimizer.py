@@ -175,9 +175,7 @@ class Planner:
                     taken_actions.append(action)
 
                 # collapse losses into single unit
-                e_reinf = tf.reduce_sum(
-                    tf.square(losses)
-                )
+                e_reinf = tf.reduce_sum(losses)
 
             # Log time after the tape is done
             tape_time = time.time()

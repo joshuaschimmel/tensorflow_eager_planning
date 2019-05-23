@@ -77,20 +77,21 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     #     visualize=True
     # )
     # see whether the plan converges
-    _, f3 = planning_cases.plan_convergence(wmr=wmr,
-                                            plan_iterations=10,
-                                            plan_length=10,
-                                            adaptation_rates=[
-                                                0.1, 0.5, 1, 2],
-                                            visualize=True
-                                            )
+    # _, f3 = planning_cases.plan_convergence(wmr=wmr,
+    #                                         plan_iterations=10,
+    #                                         plan_length=10,
+    #                                         adaptation_rates=[
+    #                                             0.1, 0.5, 1, 2],
+    #                                         visualize=True
+    #                                         )
     # check whether the agent can hold up the pendulum
-    angles = [-20, -15, 0, 15, 20]  # TODO TBD angles
+    angles = [-20, -15, -10, 0, 10, 15, 20]  # TODO TBD angles
     speeds = [0]  # TODO TBD speeds
     _, f4 = planning_cases.angle_test(wmr=wmr,
                                       angles=angles,
                                       speeds=speeds,
                                       steps=100,
+                                      plan_length=25,
                                       visualize=True
                                       )
     plt.show()
