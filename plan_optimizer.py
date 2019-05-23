@@ -142,8 +142,6 @@ class Planner:
             # list of the step in the plan, the actions previously
             # taken and the resulting loss after the current step
             derivatives = []
-            # log the position, loss and gradients for each action
-            optimization_log = []
 
             # collect the rewards and calculations using
             # gradient tape
@@ -185,38 +183,49 @@ class Planner:
             tape_time = time.time()
             # print(f"Tape Time: {tape_time - start_time}")
             taken_action_i = 0
-            for taken_action in taken_actions:
-                grad = tape.gradient(e_reinf, taken_action)
-                if self.plan_strategy == "last":
+            grads = tape.gradient(e_reinf, taken_actions)
+            if self.plan_strategy == "last":
+                for grad in grads:
                     grad = grad * ((taken_action_i + 1) /
                                    len(taken_actions))
-                elif self.plan_strategy == "first":
+                    taken_action_i += 1
+
+            elif self.plan_strategy == "first":
+                for grad in grads:
                     grad = grad * (1 - ((taken_action_i + 1) /
                                         len(taken_actions)))
-                grads.append(grad)
+                    taken_action_i += 1
 
-                if self.return_logs:
-                    # add the log for each action to the whole log list
-                    # as a numpy array
-                    optimization_log.append(np.array([
-                        # objects adaptation rate
-                        self.adaptation_rate,
-                        # epsilon, current iteration
-                        e,
-                        # loss for this action
-                        np.asscalar(e_reinf.numpy()),
-                        # the position of the loss
-                        taken_action_i,
-                        # the gradient
-                        np.asscalar(grad.numpy()),
-                        # the position of the action
-                        taken_action_i,
-                    ]))
-                # update counter
-                taken_action_i += 1
             grads = [
                 tf.reshape(x, []) for x in grads
             ]
+
+            if self.return_logs:
+                # add the log for each action to the whole log list
+                # as a numpy array
+                plan_length = len(self.plan)
+                adaptation_rates = [self.adaptation_rate] * plan_length
+                reinf_energies = np.repeat(
+                    np.asscalar(e_reinf.numpy()),
+                    plan_length
+                )
+
+                optimization_log = np.stack((
+                    # objects adaptation rate
+                    adaptation_rates,
+                    # epsilon, current iteration
+                    [e] * plan_length,
+                    # loss for this action
+                    reinf_energies,
+                    # the position of the loss
+                    [0] * plan_length,
+                    # the gradient
+                    [x.numpy() for x in grads],
+                    # the position of the action
+                    np.arange(plan_length),
+                ), -1)
+            # update counter
+            taken_action_i += 1
 
             # Log the time when gradients were calculated
             grad_time = time.time()
@@ -242,7 +251,7 @@ class Planner:
 
             # if logging is on, append times and gradients to the log list
             if self.return_logs:
-                # TODO return a DataFrame
+                    # TODO return a DataFrame
                 logs.append({
                     "times": {
                         "start": start_time,
@@ -250,9 +259,9 @@ class Planner:
                         "grad": grad_time,
                         "end": end_time
                     },
-                    "gradient_log": np.array(optimization_log)
+                    "gradient_log": optimization_log
                 })
-        # return the logs or None, if logging is off
+            # return the logs or None, if logging is off
         return logs
 
 
