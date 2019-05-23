@@ -51,7 +51,7 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
     # setup the scenario
     env = pendulum.Pendulum(render=False, state=starting_state)
 
-    init_plan = po.get_random_plan(plan_length)
+    init_plan = po.get_zero_plan(plan_length)
 
     # save result
     log_list = []
@@ -63,7 +63,7 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
                                     learning_rate=rate,
                                     iterations=plan_iterations,
                                     initial_plan=copy.deepcopy(init_plan),
-                                    fill_function=po.get_random_action,
+                                    fill_function=po.get_zero_action,
                                     strategy="first",
                                     return_logs=True
                                     )
