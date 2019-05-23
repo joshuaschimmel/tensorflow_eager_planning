@@ -159,7 +159,8 @@ def run_simulation_plan(plan: list, render: bool = False) -> list:
     simulation_states = [state_0]
 
     for action in plan:
-        simulation_states.append(env(action))
+        state, _ = env(action)
+        simulation_states.append(state)
 
     env.close()
     return simulation_states
