@@ -64,6 +64,7 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
                                     iterations=plan_iterations,
                                     initial_plan=copy.deepcopy(init_plan),
                                     fill_function=po.get_random_action,
+                                    strategy="first",
                                     return_logs=True
                                     )
         # save the logs created while planning
@@ -246,6 +247,7 @@ def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
 
     # get the true states
     true_states = pendulum.run_simulation_plan(plan=plan)
+
     # use first state as starting state for prediction
     s_0 = true_states[0]
     # predict states
@@ -478,7 +480,8 @@ def angle_test(wmr: world_model.WorldModelWrapper,
                                         learning_rate=1,
                                         iterations=10,
                                         initial_plan=plan,
-                                        fill_function=po.get_random_action
+                                        fill_function=po.get_random_action,
+                                        strategy="first"
                                         )
             current_state = env.get_state()
             # create first entry

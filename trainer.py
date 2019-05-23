@@ -44,20 +44,20 @@ model_path = f"models/{model_name}.h5"
 
 
 wm = world_model.WorldModelWrapper()
-# wm.load_model()
+wm.load_model()
 
-wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
+# wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
+# wm.print_summary()
+# train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
+# ax = train_l.plot(x="rollout", y="mean_loss")
+# test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
+# test_l.plot(x="test_position", y="test_loss",
+#             color="red", marker="+",
+#             kind="scatter", ax=ax
+#             )
+# plt.show()
 wm.print_summary()
 env = pendulum.Pendulum()
-train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
-wm.print_summary()
-ax = train_l.plot(x="rollout", y="mean_loss")
-test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
-test_l.plot(x="test_position", y="test_loss",
-            color="red", marker="+",
-            kind="scatter", ax=ax
-            )
-plt.show()
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
@@ -76,27 +76,40 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
         steps=_steps,
         visualize=True
     )
-    # # see whether the plan converges
-    # _, f3 = planning_cases.plan_convergence(wmr=wmr,
-    #                                         plan_iterations=10,
-    #                                         plan_length=10,
-    #                                         adaptation_rates=[
-    #                                             0.1, 0.5, 1, 2],
-    #                                         visualize=True
-    #                                         )
-    # # check whether the agent can hold up the pendulum
-    # angles = [0]  # TODO TBD angles
-    # speeds = [0]  # TODO TBD speeds
-    # _, f4 = planning_cases.angle_test(wmr=wmr,
-    #                                   angles=angles,
-    #                                   speeds=speeds,
-    #                                   steps=20,
-    #                                   visualize=True
-    #                                   )
+    # see whether the plan converges
+    _, f3 = planning_cases.plan_convergence(wmr=wmr,
+                                            plan_iterations=10,
+                                            plan_length=10,
+                                            adaptation_rates=[
+                                                0.1, 0.5, 1, 2],
+                                            visualize=True
+                                            )
+    # check whether the agent can hold up the pendulum
+    angles = [-15, -10, -5, 0, 5, 10, 15]  # TODO TBD angles
+    speeds = [0]  # TODO TBD speeds
+    _, f4 = planning_cases.angle_test(wmr=wmr,
+                                      angles=angles,
+                                      speeds=speeds,
+                                      steps=100,
+                                      visualize=True
+                                      )
     plt.show()
 
 
 test_world_model(wmr=wm)
+planner = plan_optimizer.Planner(world_model=wm.get_model(),
+                                 learning_rate=2,
+                                 iterations=10,
+                                 initial_plan=plan_optimizer.get_zero_plan(25),
+                                 fill_function=plan_optimizer.get_zero_action,
+                                 strategy="first"
+                                 )
+
+
+# planning_cases.environment_performance(planner=planner,
+#                                        steps=50,
+#                                        visualize=True
+#                                        )
 
 # planning_cases.eval_model_predictions(10, wm)
 

@@ -12,6 +12,7 @@ class Planner:
                  iterations: int,
                  initial_plan: list,
                  fill_function,
+                 strategy: str = "all",
                  return_logs: bool = False
                  ):
         """Initializes the Planner object.
@@ -31,6 +32,7 @@ class Planner:
         self.adaptation_rate = learning_rate
         self.iterations = iterations
         self.new_action = fill_function
+        self.plan_strategy = strategy
         self.current_state = None
         self.current_action = None
         self.return_logs = return_logs
@@ -167,7 +169,6 @@ class Planner:
                     # update the list of already taken actions
                     taken_actions.append(action)
                     # flatten the state and calculate the loss
-                    # TODO add action taken to reinforcement
                     loss_value = reward(prediction_state, action) * -1
                     # add the loss value together with the actions that
                     # led up to it and add them
@@ -191,6 +192,16 @@ class Planner:
                 for action in taken_actions:
                     # calculate the gradients for each action
                     grad = tape.gradient(loss, action)
+
+                    # weigh the plan differently
+                    # TODO prettify with dicts
+                    if self.plan_strategy == "last":
+                        grad = grad * ((taken_action_i + 1) /
+                                       len(taken_actions))
+                    elif self.plan_strategy == "first":
+                        grad = grad * (1 - ((taken_action_i + 1) /
+                                            len(taken_actions)))
+
                     # add the gradient to the position in grads
                     # corresponding to the actions position in plan
                     # a bit of EAFP
