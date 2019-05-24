@@ -90,8 +90,8 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     _, f4 = planning_cases.angle_test(wmr=wmr,
                                       angles=angles,
                                       speeds=speeds,
-                                      steps=100,
-                                      plan_length=25,
+                                      steps=50,
+                                      plan_length=10,
                                       visualize=True
                                       )
     plt.show()

@@ -478,8 +478,8 @@ def angle_test(wmr: world_model.WorldModelWrapper,
 
             # initialize the plan optimizer
             plan_optimizer = po.Planner(world_model=wmr.get_model(),
-                                        learning_rate=0.1,
-                                        iterations=10,
+                                        learning_rate=2,
+                                        iterations=20,
                                         initial_plan=plan,
                                         fill_function=po.get_zero_action,
                                         strategy="first"
