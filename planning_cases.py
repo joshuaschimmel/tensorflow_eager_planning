@@ -434,11 +434,11 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
     return df_all, figure
 
 
-def angle_test(wmr: world_model.WorldModelWrapper,
+def angle_test(planner: po.Planner,
                angles: list,
                speeds: list,
-               plan_length: int = 10,
                steps: int = 50,
+               plan_length: int = 10,
                visualize: bool = False,
                ) -> pd.DataFrame:
     """Initializes with speeds and angles, returns true theta and dot values.
@@ -456,7 +456,6 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     :rtype: pd.DataFrame
     """
     # hyperparameters
-    _plan_length = plan_length
     _steps = steps
     _logs = []
     _columns = [
@@ -470,27 +469,19 @@ def angle_test(wmr: world_model.WorldModelWrapper,
     for angle in angles:
         for speed in speeds:
             print(f"current angle and speed: {angle}, {speed}")
-            rad = np.radians(angle)
-
             # initialize the environment with the given parameters
+            rad = np.radians(angle)
             env = pendulum.Pendulum(state=[rad, speed])
-            plan = po.get_zero_plan(_plan_length)
+            plan = po.get_zero_plan(plan_length)
+            planner.reset(plan)
 
-            # initialize the plan optimizer
-            plan_optimizer = po.Planner(world_model=wmr.get_model(),
-                                        learning_rate=2,
-                                        iterations=20,
-                                        initial_plan=plan,
-                                        fill_function=po.get_zero_action,
-                                        strategy="first"
-                                        )
             current_state = env.get_state()
             # create first entry
             _logs.append([angle, speed, 0, *env.get_env_state()])
             # run the rollout
             for step in range(_steps):
                 print(f"current step: {step}")
-                next_action, _ = plan_optimizer.plan_next_step(current_state)
+                next_action, _ = planner.plan_next_step(current_state)
                 current_state, _ = env(next_action)
                 _logs.append([angle, speed, step + 1, *env.get_env_state()])
             # close the environment after the rollout
