@@ -57,7 +57,7 @@ test_l.plot(x="test_position", y="test_loss",
             color="red", marker="+",
             kind="scatter", ax=ax
             )
-plt.show()
+# # plt.show()
 wm.print_summary()
 
 
@@ -109,32 +109,33 @@ planner = plan_optimizer.Planner(world_model=wm.get_model(),
                                  )
 
 strategies = [None, "first", "last"]
-#angles = np.arange(0, 61, 1) - 30
-angles = [0]
+angles = np.arange(0, 61, 1) - 30
+steps = 100
+plan_length = 10
 full_df = None
 for i in range(50):
     planner.set_strategy(None)
     none_result, _ = planning_cases.angle_test(planner=planner,
                                                angles=angles,
                                                speeds=[0],
-                                               steps=100,
-                                               plan_length=10,
+                                               steps=steps,
+                                               plan_length=plan_length,
                                                visualize=False
                                                )
     planner.set_strategy("first")
     first_result, _ = planning_cases.angle_test(planner=planner,
                                                 angles=angles,
                                                 speeds=[0],
-                                                steps=100,
-                                                plan_length=10,
+                                                steps=steps,
+                                                plan_length=plan_length,
                                                 visualize=False
                                                 )
     planner.set_strategy("last")
     last_result, _ = planning_cases.angle_test(planner=planner,
                                                angles=angles,
                                                speeds=[0],
-                                               steps=100,
-                                               plan_length=10,
+                                               steps=steps,
+                                               plan_length=plan_length,
                                                visualize=False
                                                )
     df = pd.concat([none_result, first_result, last_result],
@@ -146,8 +147,14 @@ for i in range(50):
         full_df = pd.concat([full_df, df],
                             ignore_index=True
                             )
-df.to_parquet(f"data/full_df.parquet",
-              engine="pyarrow")
+    else:
+        full_df = df
+    if i != 0 and i % 10 == 0:
+        full_df.to_parquet(f"data/full_angle_test_{i}.parquet",
+                           engine="pyarrow")
+
+full_df.to_parquet("data/full_angle_test.parquet",
+                   engine="pyarrow")
 
 # planning_cases.environment_performance(planner=planner,
 #                                        steps=50,
