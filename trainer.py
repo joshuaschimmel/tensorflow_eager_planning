@@ -1,6 +1,7 @@
 import copy
 import time
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 import gym
@@ -43,39 +44,39 @@ model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
 model_path = f"models/{model_name}.h5"
 
 
-wm = world_model.WorldModelWrapper()
-wm.load_model()
-
-# wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
-# wm.print_summary()
-# train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
-# ax = train_l.plot(x="rollout", y="mean_loss")
-# test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
-# test_l.plot(x="test_position", y="test_loss",
-#             color="red", marker="+",
-#             kind="scatter", ax=ax
-#             )
-# plt.show()
-wm.print_summary()
 env = pendulum.Pendulum()
+wm = world_model.WorldModelWrapper()
+# wm.load_model()
+
+wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
+wm.print_summary()
+train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
+ax = train_l.plot(x="rollout", y="mean_loss")
+test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
+test_l.plot(x="test_position", y="test_loss",
+            color="red", marker="+",
+            kind="scatter", ax=ax
+            )
+plt.show()
+wm.print_summary()
 
 
 def test_world_model(wmr: world_model.WorldModelWrapper):
     _rollouts = 200
     _steps = 100
-    # # eval behaviour of RMSE for a single rollout
-    # _, f1 = planning_cases.single_rollout_error(
-    #     steps=_steps,
-    #     world_model_wrapper=wmr,
-    #     visualize=True
-    # )
-    # # see RMSE for multiple rollouts
-    # _, f2 = planning_cases.model_quality_analysis(
-    #     wmr=wmr,
-    #     rollouts=_rollouts,
-    #     steps=_steps,
-    #     visualize=True
-    # )
+    # eval behaviour of RMSE for a single rollout
+    _, f1 = planning_cases.single_rollout_error(
+        steps=_steps,
+        world_model_wrapper=wmr,
+        visualize=True
+    )
+    # see RMSE for multiple rollouts
+    _, f2 = planning_cases.model_quality_analysis(
+        wmr=wmr,
+        rollouts=_rollouts,
+        steps=_steps,
+        visualize=True
+    )
     # see whether the plan converges
     # _, f3 = planning_cases.plan_convergence(wmr=wmr,
     #                                         plan_iterations=10,
@@ -85,27 +86,68 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
     #                                         visualize=True
     #                                         )
     # check whether the agent can hold up the pendulum
-    angles = [-20, -15, -10, 0, 10, 15, 20]  # TODO TBD angles
-    speeds = [0]  # TODO TBD speeds
-    _, f4 = planning_cases.angle_test(wmr=wmr,
-                                      angles=angles,
-                                      speeds=speeds,
-                                      steps=50,
-                                      plan_length=10,
-                                      visualize=True
-                                      )
+    # angles = [-20, -15, -10, 0, 10, 15, 20]  # TODO TBD angles
+    # speeds = [0]  # TODO TBD speeds
+    # _, f4 = planning_cases.angle_test(wmr=wmr,
+    #                                   angles=angles,
+    #                                   speeds=speeds,
+    #                                   steps=50,
+    #                                   plan_length=10,
+    #                                   visualize=True
+    #                                   )
     plt.show()
 
+# test_world_model(wmr=wm)
 
-test_world_model(wmr=wm)
+
 planner = plan_optimizer.Planner(world_model=wm.get_model(),
-                                 learning_rate=2,
-                                 iterations=10,
-                                 initial_plan=plan_optimizer.get_zero_plan(25),
+                                 learning_rate=0.5,
+                                 iterations=100,
+                                 initial_plan=plan_optimizer.get_zero_plan(10),
                                  fill_function=plan_optimizer.get_zero_action,
-                                 strategy="first"
+                                 strategy=None
                                  )
 
+strategies = [None, "first", "last"]
+#angles = np.arange(0, 61, 1) - 30
+angles = [0]
+full_df = None
+for i in range(50):
+    planner.set_strategy(None)
+    none_result, _ = planning_cases.angle_test(planner=planner,
+                                               angles=angles,
+                                               speeds=[0],
+                                               steps=100,
+                                               plan_length=10,
+                                               visualize=False
+                                               )
+    planner.set_strategy("first")
+    first_result, _ = planning_cases.angle_test(planner=planner,
+                                                angles=angles,
+                                                speeds=[0],
+                                                steps=100,
+                                                plan_length=10,
+                                                visualize=False
+                                                )
+    planner.set_strategy("last")
+    last_result, _ = planning_cases.angle_test(planner=planner,
+                                               angles=angles,
+                                               speeds=[0],
+                                               steps=100,
+                                               plan_length=10,
+                                               visualize=False
+                                               )
+    df = pd.concat([none_result, first_result, last_result],
+                   ignore_index=True)
+    df["i"] = i
+    df.to_parquet(f"data/angle_test_{i}.parquet",
+                  engine="pyarrow")
+    if full_df is not None:
+        full_df = pd.concat([full_df, df],
+                            ignore_index=True
+                            )
+df.to_parquet(f"data/full_df.parquet",
+              engine="pyarrow")
 
 # planning_cases.environment_performance(planner=planner,
 #                                        steps=50,
