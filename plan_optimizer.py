@@ -89,6 +89,10 @@ class Planner:
         """Sets a new number of iterations"""
         self.iterations = iterations
 
+    def set_strategy(self, strategy: str):
+        """Seets the strategy of this planner."""
+        self.plan_strategy = strategy
+
     def reset(self, plan):
         """Resets the object and gives it a new starting plan
 
