@@ -145,12 +145,12 @@ class Planner:
             grads = []
             # list of the step in the plan, the actions previously
             # taken and the resulting loss after the current step
-            derivatives = []
+            # derivatives = []
 
             # collect the rewards and calculations using
             # gradient tape
             losses = []
-            with tf.GradientTape(persistent=True) as tape:
+            with tf.GradientTape() as tape:
                 # iterate over all actions and keep track
                 # of the actions index for logging
                 for step in range(len(self.plan)):
@@ -175,7 +175,7 @@ class Planner:
                     # led up to it and add them
                     # to the list of derivatives
                     losses.append(loss_value)
-                    derivatives.append([step, loss_value])
+                    # derivatives.append([step, loss_value])
                     taken_actions.append(action)
 
                 # collapse losses into single unit
@@ -226,8 +226,6 @@ class Planner:
                     # the position of the action
                     np.arange(plan_length),
                 ), -1)
-            # update counter
-            taken_action_i += 1
 
             # Log the time when gradients were calculated
             grad_time = time.time()

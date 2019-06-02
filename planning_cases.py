@@ -64,7 +64,7 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
                                     iterations=plan_iterations,
                                     initial_plan=copy.deepcopy(init_plan),
                                     fill_function=po.get_zero_action,
-                                    strategy="first",
+                                    strategy=None,
                                     return_logs=True
                                     )
         # save the logs created while planning
@@ -115,7 +115,7 @@ def plan_convergence(wmr: world_model.WorldModelWrapper,
                             kind="box",
                             data=df_a0
                             )
-        figure = g_box.fig
+        figure = g_box
 
     return result_df, figure
 
@@ -238,9 +238,9 @@ def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
     # initilize array to save the observations in
     observations = []
     columns = [
-        "rollout", "step",
-        "source", "state_type",
-        "value"
+        "rollout", "Step",
+        "Source", "State",
+        "Value"
     ]
 
     plan = pendulum.get_random_plan(steps)
@@ -290,31 +290,31 @@ def single_rollout_error(world_model_wrapper: world_model.WorldModelWrapper,
     figure = None
     if visualize:
         states = observations_df[
-            observations_df["source"].str.contains("RMSE") == False
+            observations_df["Source"].str.contains("RMSE") == False
         ]
         errors = observations_df[
-            observations_df["source"].str.contains("RMSE")
+            observations_df["Source"].str.contains("RMSE")
         ]
         sns.set(style="ticks")
         # confidence interval for all states
-        g = sns.relplot(x="step",
-                        y="value",
-                        hue="state_type",
-                        style="source",
+        g = sns.relplot(x="Step",
+                        y="Value",
+                        hue="State",
+                        style="Source",
                         height=3,
                         aspect=6/2,
                         kind="line",
                         data=states
                         )
 
-        sns.lineplot(x="step",
-                     y="value",
+        sns.lineplot(x="Step",
+                     y="Value",
                      linewidth=3,
                      color="cyan",
                      legend=False,
                      data=errors,
                      ax=g.ax)
-        figure = g.fig
+        figure = g
     return observations_df, figure
 
 
@@ -429,7 +429,7 @@ def model_quality_analysis(wmr: world_model.WorldModelWrapper,
                      data=df_mean,
                      ax=g.ax
                      )
-        figure = g.fig
+        figure = g
 
     return df_all, figure
 
@@ -506,7 +506,7 @@ def angle_test(planner: po.Planner,
             kind="line",
             data=df
         )
-        figure = g.fig
+        figure = g
 
     return results, figure
 
@@ -562,7 +562,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
             aspect=3/1,
             data=df
         )
-        figure = g.fig
+        figure = g
     return results, figure
 
 
@@ -618,7 +618,7 @@ def environment_performance(planner: po.Planner,
                     aspect=3/1,
                     ax=g.ax,
                     data=df)
-        figure = g.fig
+        figure = g
 
     return ((accumulated_reinforcement, reinforcements),
             figure)

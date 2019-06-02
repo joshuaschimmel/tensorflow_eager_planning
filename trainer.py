@@ -51,12 +51,24 @@ wm.load_model()
 # wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
 # wm.print_summary()
 # train_l, test_l = wm.train_model(env=env, rollouts=4000, steps=15)
-# ax = train_l.plot(x="rollout", y="mean_loss")
 # test_l["test_position"] = [len(train_l.index)] * len(test_l.index)
-# test_l.plot(x="test_position", y="test_loss",
-#             color="red", marker="+",
-#             kind="scatter", ax=ax
-#             )
+# ax = test_l.plot(x="test_position", y="test_loss",
+#                  color="red", marker="+",
+#                  s=50,
+#                  # legend=True,
+#                  title="World Model Training Error",
+#                  kind="scatter"
+#                  )
+# train_l.plot(x="rollout", y="mean_loss",
+#              legend=False,
+#              grid=True,
+#              title="World Model Training Error",
+#              kind="line",
+#              ax=ax
+#              )
+# ax.set_ylabel("RMSE")
+# ax.set_xlabel("Iteration")
+# ax.set_xticklabels(train_l.index, minor=True)
 # plt.show()
 wm.print_summary()
 
