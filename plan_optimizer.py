@@ -145,7 +145,7 @@ class Planner:
             grads = []
             # list of the step in the plan, the actions previously
             # taken and the resulting loss after the current step
-            derivatives = []
+            # derivatives = []
 
             # collect the rewards and calculations using
             # gradient tape
@@ -175,7 +175,7 @@ class Planner:
                     # led up to it and add them
                     # to the list of derivatives
                     losses.append(loss_value)
-                    derivatives.append([step, loss_value])
+                    # derivatives.append([step, loss_value])
                     taken_actions.append(action)
 
                 # collapse losses into single unit
