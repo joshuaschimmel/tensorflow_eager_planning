@@ -147,7 +147,7 @@ def angle_test_experiment(wm: world_model.WorldModelWrapper):
                                                     plan_length=plan_length,
                                                     visualize=False
                                                     )
-        first_result["condtition"] = "First"
+        first_result["condition"] = "First"
 
         planner.set_strategy("last")
         last_result, _ = planning_cases.angle_test(planner=planner,
