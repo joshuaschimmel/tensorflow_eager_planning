@@ -112,95 +112,125 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
 # test_world_model(wmr=wm)
 
 
-planner = plan_optimizer.Planner(world_model=wm.get_model(),
-                                 learning_rate=0.5,
-                                 iterations=100,
-                                 initial_plan=plan_optimizer.get_zero_plan(10),
-                                 fill_function=plan_optimizer.get_zero_action,
-                                 strategy=None
-                                 )
+def angle_test_experiment(wm: world_model.WorldModelWrapper):
+    planner = plan_optimizer.Planner(world_model=wm.get_model(),
+                                     learning_rate=0.5,
+                                     iterations=100,
+                                     initial_plan=plan_optimizer.get_zero_plan(
+                                         10),
+                                     fill_function=plan_optimizer.get_zero_action,
+                                     strategy=None
+                                     )
 
-strategies = ["none", "first", "last"]
-angles = np.arange(0, 61, 2) - 30
-#angles = [0]
-steps = 50
-plan_length = 10
-full_df = None
-for i in range(10):
-    planner.set_strategy("none")
-    none_result, _ = planning_cases.angle_test(planner=planner,
-                                               angles=angles,
-                                               speeds=[0],
-                                               steps=steps,
-                                               plan_length=plan_length,
-                                               visualize=False
-                                               )
-    none_result["condition"] = "None"
+    strategies = ["none", "first", "last"]
+    angles = np.arange(0, 61, 2) - 30
+    #angles = [0]
+    steps = 50
+    plan_length = 10
+    full_df = None
+    for i in range(10):
+        planner.set_strategy("none")
+        none_result, _ = planning_cases.angle_test(planner=planner,
+                                                   angles=angles,
+                                                   speeds=[0],
+                                                   steps=steps,
+                                                   plan_length=plan_length,
+                                                   visualize=False
+                                                   )
+        none_result["condition"] = "None"
 
-    planner.set_strategy("first")
-    first_result, _ = planning_cases.angle_test(planner=planner,
-                                                angles=angles,
-                                                speeds=[0],
-                                                steps=steps,
-                                                plan_length=plan_length,
-                                                visualize=False
-                                                )
-    first_result["condtition"] = "First"
+        planner.set_strategy("first")
+        first_result, _ = planning_cases.angle_test(planner=planner,
+                                                    angles=angles,
+                                                    speeds=[0],
+                                                    steps=steps,
+                                                    plan_length=plan_length,
+                                                    visualize=False
+                                                    )
+        first_result["condtition"] = "First"
 
-    planner.set_strategy("last")
-    last_result, _ = planning_cases.angle_test(planner=planner,
-                                               angles=angles,
-                                               speeds=[0],
-                                               steps=steps,
-                                               plan_length=plan_length,
-                                               visualize=False
-                                               )
-    last_result["condition"] = "Last"
+        planner.set_strategy("last")
+        last_result, _ = planning_cases.angle_test(planner=planner,
+                                                   angles=angles,
+                                                   speeds=[0],
+                                                   steps=steps,
+                                                   plan_length=plan_length,
+                                                   visualize=False
+                                                   )
+        last_result["condition"] = "Last"
 
-    df = pd.concat([none_result, first_result, last_result],
-                   ignore_index=True)
-    df["i"] = i
-    df.to_parquet(f"data/angle_test_{i}.parquet",
-                  engine="pyarrow")
-    if full_df is not None:
-        full_df = pd.concat([full_df, df],
-                            ignore_index=True
-                            )
-    else:
-        full_df = df
+        df = pd.concat([none_result, first_result, last_result],
+                       ignore_index=True)
+        df["i"] = i
+        df.to_parquet(f"data/angle_test_{i}.parquet",
+                      engine="pyarrow")
+        if full_df is not None:
+            full_df = pd.concat([full_df, df],
+                                ignore_index=True
+                                )
+        else:
+            full_df = df
 
-    full_df.to_parquet(f"data/angle_test_condition_{i}.parquet",
-                       engine="pyarrow")
+        full_df.to_parquet(f"data/angle_test_condition_{i}.parquet",
+                           engine="pyarrow")
 
 
-# planning_cases.environment_performance(planner=planner,
-#                                        steps=50,
-#                                        visualize=True
-#                                        )
+def accumulated_reinforcement_experiment(wm: world_model.WorldModelWrapper,
+                                         experiment_runs: int = 10
+                                         ):
+    plan_length = 10
+    strategies = ["none", "first", "last"]
+    steps = 100
+    result_df = None
 
-# planning_cases.eval_model_predictions(10, wm)
+    planner = plan_optimizer.Planner(
+        world_model=wm.get_model(),
+        learning_rate=0.1,
+        iterations=100,
+        initial_plan=plan_optimizer.get_zero_plan(plan_length),
+        fill_function=plan_optimizer.get_zero_action,
+        strategy=None
+    )
 
-# planning_cases.plan_convergence(wm.get_model())
-# planning_cases.model_quality_analysis(test_runs=50,
-#                                      wmr=wm,
-#                                      steps=50,
-#                                      visualize=True
-#                                      )
+    for i in range(experiment_runs):
+        condition_dfs = []
+        for planning_strat in strategies:
+            print(planning_strat)
+            planner.set_strategy(planning_strat)
+            acc_reinf, reinforcements, _ = planning_cases.\
+                environment_performance(
+                    planner=planner,
+                    steps=steps,
+                    visualize=False
+                )
+            condition_df = pd.DataFrame(data=reinforcements,
+                                        columns=["step", "reinf"]
+                                        )
+            condition_df["strategy"] = planning_strat
+            condition_df["acc_reinf"] = acc_reinf
+            condition_df["cumsum_reinf"] = condition_df["reinf"].cumsum()
+            condition_dfs.append(condition_df)
 
-# df = planning_cases.prediction_accuracy(model=wm,
-#                                        rollouts = 200,
-#                                        steps = 25
-#                                        )
-# df.to_parquet("data/world_model_prediction.parquet", engine="pyarrow")
+        # Different interface for the random agent
+        print("random")
+        acc_reinf, reinfs = pendulum.run_random_agent(steps)
+        condition_df = pd.DataFrame(data=reinfs,
+                                    columns=["step", "reinf"]
+                                    )
+        condition_df["strategy"] = "random"
+        condition_df["acc_reinf"] = acc_reinf
+        condition_df["cumsum_reinf"] = condition_df["reinf"].cumsum()
+        condition_dfs.append(condition_df)
 
-# planning_cases.plan_convergence(model)
-# wm = world_model.WorldModelWrapper()
-# wm.build_keras_model(neurons=_neurons, hidden_layers=_hidden_layer)
-# env = gym.make("Pendulum-v0")
-# loss, test_loss = wm.train_model(env=env,
-#                                  steps=3,
-#                                  epochs=2
-#                                  )
+        run_df = pd.concat(condition_dfs, ignore_index=True)
+        if result_df is None:
+            result_df = run_df
+        else:
+            result_df = pd.concat([result_df, run_df], ignore_index=True)
 
-# print(loss, "\n")
-# print(test_loss)
+        result_df.to_parquet(f"data/acc_reinf_experiment_{i}.parquet",
+                             engine="pyarrow"
+                             )
+
+
+accumulated_reinforcement_experiment(wm=wm, experiment_runs=10)
