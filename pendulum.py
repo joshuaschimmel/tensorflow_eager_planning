@@ -166,6 +166,25 @@ def run_simulation_plan(plan: list, render: bool = False) -> list:
     return simulation_states
 
 
+def run_random_agent(steps: int = 10,
+                     render: bool = False
+                     ):
+    # initialise simulation environment
+    # theta is in [-pi, pi), thetadot is in [-1, 1)
+    env = Pendulum(render=render)
+    env.reset()
+    # save first state in the list
+    reinforcements = [[0, env.get_reinforcement()]]
+
+    for step in range(1, steps):
+        action = get_random_action()
+        _, reinf = env(action)
+        reinforcements.append([step, reinf])
+
+    env.close()
+    return env.get_accumulated_reinforcement(), reinforcements
+
+
 def get_state_generator(steps: int):
     """Generator function to get state transition.
 
