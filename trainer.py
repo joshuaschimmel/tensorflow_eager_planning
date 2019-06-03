@@ -114,61 +114,65 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
 
 planner = plan_optimizer.Planner(world_model=wm.get_model(),
                                  learning_rate=0.5,
-                                 iterations=100,
+                                 iterations=1,
                                  initial_plan=plan_optimizer.get_zero_plan(10),
                                  fill_function=plan_optimizer.get_zero_action,
                                  strategy=None
                                  )
 
 strategies = [None, "first", "last"]
-angles = np.arange(0, 61, 5) - 30
-#angles = [0]
-steps = 50
+#angles = np.arange(0, 61, 1) - 30
+angles = [0]
+steps = 1
 plan_length = 10
 full_df = None
-with tf.device("cpu:0"):
-    for i in range(50):
-        print(f"Iteration thing {i}")
-        planner.set_strategy(None)
-        none_result, _ = planning_cases.angle_test(planner=planner,
-                                                angles=angles,
-                                                speeds=[0],
-                                                steps=steps,
-                                                plan_length=plan_length,
-                                                visualize=False
-                                                )
-        planner.set_strategy("first")
-        first_result, _ = planning_cases.angle_test(planner=planner,
-                                                    angles=angles,
-                                                    speeds=[0],
-                                                    steps=steps,
-                                                    plan_length=plan_length,
-                                                    visualize=False
-                                                    )
-        planner.set_strategy("last")
-        last_result, _ = planning_cases.angle_test(planner=planner,
-                                                angles=angles,
-                                                speeds=[0],
-                                                steps=steps,
-                                                plan_length=plan_length,
-                                                visualize=False
-                                                )
-        df = pd.concat([none_result, first_result, last_result],
-                    ignore_index=True)
-        df["i"] = i
-        df.to_parquet(f"data/angle_test_3_{i}.parquet",
-                    engine="pyarrow")
-        if full_df is not None:
-            full_df = pd.concat([full_df, df],
-                                ignore_index=True
-                                )
-        else:
-            full_df = df
-        if i != 0 and i % 5 == 0:
-            full_df.to_parquet(f"data/full_angle_test_3_{i}.parquet",
-                            engine="pyarrow")
+for i in range(50):
+    planner.set_strategy(None)
+    none_result, _ = planning_cases.angle_test(planner=planner,
+                                               angles=angles,
+                                               speeds=[0],
+                                               steps=steps,
+                                               plan_length=plan_length,
+                                               visualize=False
+                                               )
+    none_result["condition"] = "None"
 
-full_df.to_parquet("data/full_angle_test_3.parquet",
+    planner.set_strategy("first")
+    first_result, _ = planning_cases.angle_test(planner=planner,
+                                                angles=angles,
+                                                speeds=[0],
+                                                steps=steps,
+                                                plan_length=plan_length,
+                                                visualize=False
+                                                )
+    first_result["condtition"] = "First"
+
+    planner.set_strategy("last")
+    last_result, _ = planning_cases.angle_test(planner=planner,
+                                               angles=angles,
+                                               speeds=[0],
+                                               steps=steps,
+                                               plan_length=plan_length,
+                                               visualize=False
+                                               )
+    last_result["condition"] = "Last"
+
+    df = pd.concat([none_result, first_result, last_result],
+                   ignore_index=True)
+    df["i"] = i
+    df.to_parquet(f"data/angle_test_{i}.parquet",
+                  engine="pyarrow")
+    if full_df is not None:
+        full_df = pd.concat([full_df, df],
+                            ignore_index=True
+                            )
+    else:
+        full_df = df
+    if i != 0 and i % 10 == 0:
+        full_df.to_parquet(f"data/full_angle_test_{i}.parquet",
+                           engine="pyarrow")
+
+full_df.to_parquet("data/full_angle_test.parquet",
                    engine="pyarrow")
 
 # planning_cases.environment_performance(planner=planner,
