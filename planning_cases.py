@@ -569,7 +569,7 @@ def environment_angle_behavior(visualize: bool = False) -> pd.DataFrame:
 def environment_performance(planner: po.Planner,
                             steps: int,
                             visualize: bool = False
-                            ) -> float:
+                            ):
     """Executes the Planner for a number of steps.
 
     :param planner: plan optimizer to produce an optimal plan
@@ -586,7 +586,7 @@ def environment_performance(planner: po.Planner,
     current_state = env.get_state()
     reinforcements = [[0, env.get_reinforcement()]]
 
-    for step in range(steps):
+    for step in range(1, steps):
         print(f"step {step}/{steps}")
         next_action, _ = planner.plan_next_step(current_state)
         current_state, reinf = env(next_action)
@@ -600,27 +600,30 @@ def environment_performance(planner: po.Planner,
         df = pd.DataFrame(data=reinforcements,
                           columns=["step", "reinforcement"]
                           )
-        df["cumsum"] = df["reinforcements"].cumsum()
+        df["cumsum"] = df["reinforcement"].cumsum()
 
         sns.set_context(context="paper")
         sns.set(style="whitegrid")
         g = sns.relplot(x="step",
                         y="reinforcement",
                         height=5,
-                        legend=False,
+                        legend="brief",
+                        kind="line",
                         aspect=3/1,
                         data=df
                         )
-        sns.relplot(x="step",
-                    y="cumsum",
-                    height=5,
-                    legend=False,
-                    aspect=3/1,
-                    ax=g.ax,
-                    data=df)
+        g = sns.relplot(x="step",
+                        y="cumsum",
+                        height=5,
+                        legend=False,
+                        aspect=3/1,
+                        kind="line",
+                        ax=g.ax,
+                        data=df)
         figure = g
 
-    return ((accumulated_reinforcement, reinforcements),
+    return (accumulated_reinforcement,
+            reinforcements,
             figure)
 
 
