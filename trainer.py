@@ -114,20 +114,20 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
 
 planner = plan_optimizer.Planner(world_model=wm.get_model(),
                                  learning_rate=0.5,
-                                 iterations=1,
+                                 iterations=100,
                                  initial_plan=plan_optimizer.get_zero_plan(10),
                                  fill_function=plan_optimizer.get_zero_action,
                                  strategy=None
                                  )
 
-strategies = [None, "first", "last"]
-#angles = np.arange(0, 61, 1) - 30
-angles = [0]
-steps = 1
+strategies = ["none", "first", "last"]
+angles = np.arange(0, 61, 2) - 30
+#angles = [0]
+steps = 50
 plan_length = 10
 full_df = None
-for i in range(50):
-    planner.set_strategy(None)
+for i in range(10):
+    planner.set_strategy("none")
     none_result, _ = planning_cases.angle_test(planner=planner,
                                                angles=angles,
                                                speeds=[0],
@@ -168,12 +168,10 @@ for i in range(50):
                             )
     else:
         full_df = df
-    if i != 0 and i % 10 == 0:
-        full_df.to_parquet(f"data/full_angle_test_{i}.parquet",
-                           engine="pyarrow")
 
-full_df.to_parquet("data/full_angle_test.parquet",
-                   engine="pyarrow")
+    full_df.to_parquet(f"data/angle_test_condition_{i}.parquet",
+                       engine="pyarrow")
+
 
 # planning_cases.environment_performance(planner=planner,
 #                                        steps=50,
