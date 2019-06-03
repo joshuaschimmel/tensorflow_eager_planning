@@ -12,7 +12,7 @@ class Planner:
                  iterations: int,
                  initial_plan: list,
                  fill_function,
-                 strategy: str = "all",
+                 strategy: str = "none",
                  return_logs: bool = False
                  ):
         """Initializes the Planner object.
@@ -187,16 +187,27 @@ class Planner:
             taken_action_i = 0
             grads = tape.gradient(e_reinf, taken_actions)
             if self.plan_strategy == "last":
+                temp_grads = []
                 for grad in grads:
-                    grad = grad * ((taken_action_i + 1) /
-                                   len(taken_actions))
+                    temp_grads.append(grad * ((taken_action_i + 1) /
+                                              len(taken_actions)))
                     taken_action_i += 1
+                grads = temp_grads
 
             elif self.plan_strategy == "first":
+                temp_grads = []
                 for grad in grads:
-                    grad = grad * (1 - ((taken_action_i + 1) /
-                                        len(taken_actions)))
+                    temp_grads.append(grad * (1 - ((taken_action_i + 1) /
+                                                   len(taken_actions))))
                     taken_action_i += 1
+                grads = temp_grads
+
+            elif self.plan_strategy == "none":
+                taken_action_i = len(grads)
+
+            else:
+                raise ValueError(f"Expected planning strategy, got "
+                                 f"{self.plan_strategy} instead.")
 
             grads = [
                 tf.reshape(x, []) for x in grads
