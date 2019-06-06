@@ -582,15 +582,14 @@ def environment_performance(planner: po.Planner,
     :return: the accumulated reinforcement and list of reinforcements
     :rtype: float, list
     """
-    env = pendulum.Pendulum()
+    env = pendulum.Pendulum(render=True)
     current_state = env.get_state()
     reinforcements = [[0, env.get_reinforcement()]]
 
     for step in range(1, steps):
-        print(f"step {step}/{steps}")
         next_action, _ = planner.plan_next_step(current_state)
         current_state, reinf = env(next_action)
-        print(reinf)
+        print(f"step {step}/{steps}, reinforcement: {reinf}")
         reinforcements.append([step, reinf])
     accumulated_reinforcement = env.get_accumulated_reinforcement()
     env.close()
