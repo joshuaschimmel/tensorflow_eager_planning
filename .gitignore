@@ -6,4 +6,3 @@ models*
 *.parquet
 forward_model.h5
 *.html
-*.ipynb
