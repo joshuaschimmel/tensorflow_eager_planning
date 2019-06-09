@@ -168,7 +168,7 @@ def accumulated_reinforcement_experiment(wm: world_model.WorldModelWrapper,
 
     planner = plan_optimizer.Planner(
         world_model=wm.get_model(),
-        learning_rate=0.1,
+        adaptation_rate=0.1,
         iterations=100,
         initial_plan=plan_optimizer.get_zero_plan(plan_length),
         fill_function=plan_optimizer.get_zero_action,
