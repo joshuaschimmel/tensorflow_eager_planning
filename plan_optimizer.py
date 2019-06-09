@@ -163,7 +163,9 @@ class Planner:
                     losses.append(loss_value)
                     taken_actions.append(action)
 
-                # collapse losses into single unit
+                # pool losses into reinforcement energy
+                # this lets tensorflow calculate the gradients
+                # easier
                 e_reinf = tf.reduce_sum(losses)
 
             # Log time after the tape is done
