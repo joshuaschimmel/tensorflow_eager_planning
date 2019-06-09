@@ -12,40 +12,18 @@ import pendulum
 import world_model
 import plan_optimizer
 import planning_cases
-# import helper_functions as hf
-
 
 tf.enable_eager_execution()
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Eager execution: {tf.executing_eagerly()}")
 
-# hyperparameters for the world model
-_neurons = 40
-_hidden_layer = 2
-_epochs = 1
-_loss_function = world_model.rmse_loss
-_drop_rate = 0.5
-_load_model = True
-
-
-_steps = 100
-_test_runs = 50
-
-# get the model identifier
-drop_text = "nodrop" if _drop_rate == 0 else f"{_drop_rate}drop"
-neuron_text = (str(_neurons) + '-') \
-    * _hidden_layer \
-    + str(_neurons) + "_" \
-    + str(_loss_function.__name__)
-
-# load saved model
-model_name = f"model_{neuron_text}_{_epochs}e_{drop_text}"
-model_path = f"models/{model_name}.h5"
-
 
 env = pendulum.Pendulum()
 wm = world_model.WorldModelWrapper()
+
+# +++ switch comments if you want to train a new model +++
+# this WILL OVERWRITE the currently saved model!
 wm.load_model()
 
 # wm.build_keras_model(neurons=30, hidden_layers=1, dropout_rate=0)
@@ -73,7 +51,12 @@ wm.load_model()
 wm.print_summary()
 
 
-def test_world_model(wmr: world_model.WorldModelWrapper):
+def test_performance(wmr: world_model.WorldModelWrapper):
+    """Visualizes performance of current model.
+
+    :param wmr: [description]
+    :type wmr: world_model.WorldModelWrapper
+    """
     _rollouts = 200
     _steps = 100
     # eval behaviour of RMSE for a single rollout
@@ -89,24 +72,24 @@ def test_world_model(wmr: world_model.WorldModelWrapper):
         steps=_steps,
         visualize=True
     )
-    # see whether the plan converges
-    # _, f3 = planning_cases.plan_convergence(wmr=wmr,
-    #                                         plan_iterations=10,
-    #                                         plan_length=10,
-    #                                         adaptation_rates=[
-    #                                             0.1, 0.5, 1, 2],
-    #                                         visualize=True
-    #                                         )
-    # check whether the agent can hold up the pendulum
-    # angles = [-20, -15, -10, 0, 10, 15, 20]  # TODO TBD angles
-    # speeds = [0]  # TODO TBD speeds
-    # _, f4 = planning_cases.angle_test(wmr=wmr,
-    #                                   angles=angles,
-    #                                   speeds=speeds,
-    #                                   steps=50,
-    #                                   plan_length=10,
-    #                                   visualize=True
-    #                                   )
+    # see whether the plan converges TODO still works?
+    _, f3 = planning_cases.plan_convergence(wmr=wmr,
+                                            plan_iterations=10,
+                                            plan_length=10,
+                                            adaptation_rates=[
+                                                0.1, 0.5, 1, 2],
+                                            visualize=True
+                                            )
+    # check whether the agent can hold up the pendulum TODO still works?
+    angles = [-20, -15, -10, 0, 10, 15, 20]
+    speeds = [0]
+    _, f4 = planning_cases.angle_test(wmr=wmr,
+                                      angles=angles,
+                                      speeds=speeds,
+                                      steps=50,
+                                      plan_length=10,
+                                      visualize=True
+                                      )
     plt.show()
 
 # test_world_model(wmr=wm)
@@ -228,9 +211,34 @@ def accumulated_reinforcement_experiment(wm: world_model.WorldModelWrapper,
         else:
             result_df = pd.concat([result_df, run_df], ignore_index=True)
 
-        result_df.to_parquet(f"data/acc_reinf_experiment_{i}.parquet",
-                             engine="pyarrow"
-                             )
+        # result_df.to_parquet(f"data/acc_reinf_experiment_{i}.parquet",
+        #                     engine="pyarrow"
+        #                     )
 
 
-accumulated_reinforcement_experiment(wm=wm, experiment_runs=10)
+def demo(wm: world_model.WorldModelWrapper,
+         strategy: str = "random",
+         steps: int = 500
+         ):
+
+    strategies = ["none", "first", "last"]
+    if strategy in strategies:
+        planner = plan_optimizer.Planner(
+            world_model=wm.get_model(),
+            learning_rate=0.1,
+            iterations=100,
+            initial_plan=plan_optimizer.get_zero_plan(10),
+            fill_function=plan_optimizer.get_zero_action,
+            strategy=strategy
+        )
+        planning_cases.environment_performance(planner=planner,
+                                               steps=steps,
+                                               visualize=True
+                                               )
+
+    elif strategy == "random":
+        pendulum.run_random_agent(steps, render=True)
+    else:
+        error_str = (f"strategy not one of (none, first, last, random), "
+                     f"got '{strategy}' instead")
+        raise ValueError(error_str)
