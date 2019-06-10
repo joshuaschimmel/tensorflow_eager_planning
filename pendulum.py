@@ -4,6 +4,7 @@ import copy
 import numpy as np
 import pandas as pd
 from typing import List
+import time
 
 
 class Pendulum:
@@ -164,11 +165,15 @@ def run_simulation_plan(plan: list, render: bool = False) -> list:
     return simulation_states
 
 
-def run_random_agent(steps: int = 10,
-                     render: bool = False
+def run_random_agent(initial_state: list = [0, 0],
+                     steps: int = 10,
+                     render: bool = False,
                      ):
     """Runs an agent which only takes random actions.
 
+    :param initial_state: a state to start from,
+        defaults to [0,0]
+    :type initial_state: [float, float], optional
     :param steps: number of steps to do,
         defaults to 10
     :type steps: int, optional
@@ -181,15 +186,17 @@ def run_random_agent(steps: int = 10,
     """
     # initialise simulation environment
     # theta is in [-pi, pi), thetadot is in [-1, 1)
-    env = Pendulum(render=render)
+    env = Pendulum(render=render, state=initial_state)
     env.reset()
     # save first reinforcement (0)
     reinforcements = [[0, env.get_reinforcement()]]
 
     for step in range(1, steps):
+        print(env.get_env_state())
         action = get_random_action()
         _, reinf = env(action)
         reinforcements.append([step, reinf])
+        time.sleep(0.02)
 
     env.close()
     return env.get_accumulated_reinforcement(), reinforcements
