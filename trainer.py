@@ -97,7 +97,7 @@ def test_performance(wmr: world_model.WorldModelWrapper):
 
 def angle_test_experiment(wm: world_model.WorldModelWrapper):
     planner = plan_optimizer.Planner(world_model=wm.get_model(),
-                                     learning_rate=0.5,
+                                     adaptation_rate=0.5,
                                      iterations=100,
                                      initial_plan=plan_optimizer.get_zero_plan(
                                          10),
@@ -225,7 +225,7 @@ def demo(wm: world_model.WorldModelWrapper,
     if strategy in strategies:
         planner = plan_optimizer.Planner(
             world_model=wm.get_model(),
-            learning_rate=0.1,
+            adaptation_rate=0.1,
             iterations=100,
             initial_plan=plan_optimizer.get_zero_plan(10),
             fill_function=plan_optimizer.get_zero_action,
@@ -237,8 +237,11 @@ def demo(wm: world_model.WorldModelWrapper,
                                                )
 
     elif strategy == "random":
-        pendulum.run_random_agent(steps, render=True)
+        pendulum.run_random_agent(steps=steps, render=True)
     else:
         error_str = (f"strategy not one of (none, first, last, random), "
                      f"got '{strategy}' instead")
         raise ValueError(error_str)
+
+
+demo(wm, "random", 5000)
